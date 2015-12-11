@@ -65,10 +65,42 @@ def predict(model, Xi, X, Y, eps0=1e-1, maxdist=1e3, compute_uncertainty=False):
     α = Rxx_inv*Rxy
     # all matrices are CSC
     Yi = α.T*Yd + Ym
-    if compute_error_variance:
+    if compute_uncertainty:
         Ryy = _model_covariance_matrix(model, kdxi, kdxi, maxdist=maxdist)
         ϵi = _uncertainty(Ryy, Rxy, Rxx_inv)
     else:
         ϵi = np.nan*np.empty_like(Yi)
     return Yi, ϵi
+
+def _subset_data(X, Y, n):
+    idx = np.random.random_integers(0, len(Y)-1, n)
+    x_ = X[idx,:]
+    y_ = Y[idx]
+    return x_, y_
+
+def data_covariance(X, Y, n=500, maxdist=1e3):
+    """ Estimate a structure function for data *Y* at positions *X*.
+    """
+    x_, y_ = _subset_data(X, Y, n)
+    kd = KDTree(x_)
+    d = kd.sparse_distance_matrix(kd, maxdist)
+    cov = np.dot(np.atleast_2d(y_).T, np.atleast_2d(y_))
+    return np.asarray(d.todense()).ravel(), cov.ravel()
+
+def data_variogram(X, Y, n=500, maxdist=1e3):
+    """ Estimate a structure function for data *Y* at positions *X*.
+    The variogram is defined as
+
+        2γ(h) = 1/N(h) * Σ(z(x)-z(x+h))²
+    """
+    x_, y_ = _subset_data(X, Y, n)
+
+    # Compute differences between data
+    E = np.atleast_2d(np.ones(len(y_)))
+    G = (np.dot(E.T, np.atleast_2d(y_)) - np.dot(np.atleast_2d(y_).T, E))**2
+
+    # Compute pair-wise distances
+    kd = KDTree(x_)
+    d = kd.sparse_distance_matrix(kd, maxdist)
+    return np.asarray(d.todense()).ravel(), np.abs(G.ravel())
 
