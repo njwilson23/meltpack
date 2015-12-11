@@ -11,16 +11,23 @@ def _model_covariance_matrix(model, kd1, kd2, maxdist=1e3):
     D.data = model(D.data)
     return D
 
-def _error_variance(model, Rxy, Rxx_inv):
-    """ Compute the error variance """
-    eps = model(0) + np.ones(Rxy.shape[1])
-    for i in range(len(eps)):
-        eps[i] -= (Rxy[:,i] * Rxy[:,i].T * Rxx_inv).sum()
-    return eps
+def _uncertainty(Ryy, Rxy, Rxx_inv):
+    """ Return the diagonal of the prediction uncertainty matrix.
+    (DISEP Eqn 2.398) """
+    P = Ryy - Rxy*Rxx_inv*Rxy.T
+    return P.diagonal(0)
 
-def predict(model, Xi, X, Y, eps0=1e-1, maxdist=1e3, compute_error_variance=False):
+# def _error_variance(model, Rxy, Rxx_inv):
+#     """ Compute the error variance (Brink version - slow) """
+#     eps = model(0) + np.ones(Rxy.shape[1])
+#     for i in range(len(eps)):
+#         eps[i] -= (Rxy[:,i] * Rxy[:,i].T * Rxx_inv).sum()
+#     return eps
+
+def predict(model, Xi, X, Y, eps0=1e-1, maxdist=1e3, compute_uncertainty=False):
     """ Return the Gauss-Markov minimum variance estimate for points *Xi* given
     data *Y* observed at *X*.
+    (DISEP Eqn 2.397)
 
     Arguments:
     ----------
@@ -29,11 +36,12 @@ def predict(model, Xi, X, Y, eps0=1e-1, maxdist=1e3, compute_error_variance=Fals
     X: np.ndarray, (n x 2)
     Y: np.ndarray, (n)
     eps0: zero lag variance, or measurement error
+    compute_uncertainty: boolean, optional
 
     Returns:
     --------
     (np.ndarray, np.ndarray)
-    Predictions and predicted variance
+    Predictions and prediction uncertainty (variance)
 
     Notes:
     ------
@@ -55,10 +63,11 @@ def predict(model, Xi, X, Y, eps0=1e-1, maxdist=1e3, compute_error_variance=Fals
     Rxx_inv = splinalg.inv(Rxx)
 
     α = Rxx_inv*Rxy
-    # all matrices are CSC at this point
+    # all matrices are CSC
     Yi = α.T*Yd + Ym
     if compute_error_variance:
-        ϵi = _error_variance(model, Rxy, Rxx_inv)
+        Ryy = _model_covariance_matrix(model, kdxi, kdxi, maxdist=maxdist)
+        ϵi = _uncertainty(Ryy, Rxy, Rxx_inv)
     else:
         ϵi = np.nan*np.empty_like(Yi)
     return Yi, ϵi
