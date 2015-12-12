@@ -1,15 +1,30 @@
 import karta
 import numpy as np
 
-def count_shared_pixels(scene1, scene2, bbox1=None, bbox2=None, nodata=np.nan):
+def count_shared_pixels(scene1, scene2, bbox1=None, bbox2=None, nodata=None):
+    """ Count the valid data pixels shared between two scenes.
+
+    Arguments:
+    ----------
+    scene1: RegularGrid
+    scene2: RegularGrid
+    bbox1: tuple, optional
+    bbox2: tuple, optional
+    nodata: nodata value, optional
+
+    Returns:
+    --------
+    int
+    """
     if bbox1 is None:
         extent = scene1.get_data_extent()
         bbox1 = (extent[0], extent[2], extent[1], extent[3])
     if bbox2 is None:
         extent = scene2.get_data_extent()
         bbox2 = (extent[0], extent[2], extent[1], extent[3])
+    if nodata is None:
+        nodata = scene1.nodata
 
-    nodata = scene1.nodata
     if np.isnan(nodata):
         isnodata = np.isnan
     else:

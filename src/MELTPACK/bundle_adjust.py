@@ -1,5 +1,5 @@
 """
-Functions to compute least-squares corrections to mosaic DEMs
+Functions to compute least-squares corrections to smoothly mosaic DEMs
 """
 
 import itertools
@@ -18,6 +18,9 @@ def _comparison_matrix(n):
     return c, C
 
 def count_overlapping_pixels(grid1, grid2):
+    """ Returns the number of non-NaN pixels that overlap between two grids with
+    the same size and geotransform.
+    """
     return np.sum(~np.isnan(grid1.values) & ~np.isnan(grid2.values))
 
 def compute_vertical_corrections(grid_fnms, min_pixel_overlap=1000):

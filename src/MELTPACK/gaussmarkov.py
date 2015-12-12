@@ -15,7 +15,7 @@ def _uncertainty(Ryy, Rxy, Rxx_inv):
     """ Return the diagonal of the prediction uncertainty matrix.
     (DISEP Eqn 2.398) """
     P = Ryy - Rxy*Rxx_inv*Rxy.T
-    return P.diagonal(0)
+    return P.diagonal()
 
 # def _error_variance(model, Rxy, Rxx_inv):
 #     """ Compute the error variance (Brink version - slow) """
