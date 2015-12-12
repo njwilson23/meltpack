@@ -62,15 +62,15 @@ def predict(model, Xi, X, Y, eps0=1e-1, maxdist=1e3, compute_uncertainty=False):
 
     Rxx_inv = splinalg.inv(Rxx)
 
-    α = Rxx_inv*Rxy
+    alpha = Rxx_inv*Rxy
     # all matrices are CSC
-    Yi = α.T*Yd + Ym
+    Yi = alpha.T*Yd + Ym
     if compute_uncertainty:
         Ryy = _model_covariance_matrix(model, kdxi, kdxi, maxdist=maxdist)
-        ϵi = _uncertainty(Ryy, Rxy, Rxx_inv)
+        epsi = _uncertainty(Ryy, Rxy, Rxx_inv)
     else:
-        ϵi = np.nan*np.empty_like(Yi)
-    return Yi, ϵi
+        epsi = np.nan*np.empty_like(Yi)
+    return Yi, epsi
 
 def _subset_data(X, Y, n):
     idx = np.random.random_integers(0, len(Y)-1, n)
