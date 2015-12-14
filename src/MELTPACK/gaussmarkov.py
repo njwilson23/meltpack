@@ -2,11 +2,16 @@
 """ Implementation of Gauss-Markov estimators """
 
 import numpy as np
-from scipy.spatial import cKDTree
+import scipy.spatial
 from scipy import linalg, sparse
 import scipy.sparse.linalg as splinalg
 
-def _model_covariance_matrix(model, kd1, kd2, maxdist=1e3):
+def _model_covariance_matrix(model, x1, x2):
+    """ Build a covariance matrix given two KD-trees and a structure function """
+    D = scipy.spatial.distance_matrix(x1, x2)
+    return model(D)
+
+def _model_covariance_matrix_kd(model, kd1, kd2, maxdist=1e3):
     """ Build a covariance matrix given two KD-trees and a structure function """
     D = kd1.sparse_distance_matrix(kd2, maxdist).tocsc()
     D.data = model(D.data)
@@ -25,7 +30,7 @@ def _uncertainty(Ryy, Rxy, Rxx_inv):
 #         eps[i] -= (Rxy[:,i] * Rxy[:,i].T * Rxx_inv).sum()
 #     return eps
 
-def predict(model, Xi, X, Y, eps0=1e-1, maxdist=1e3, compute_uncertainty=False):
+def predict(model, Xi, X, Y, eps0=1e-1, maxdist=1e3, compute_uncertainty=False, use_kd_trees=True):
     """ Return the Gauss-Markov minimum variance estimate for points *Xi* given
     data *Y* observed at *X*.
     (DISEP Eqn 2.397)
@@ -54,23 +59,41 @@ def predict(model, Xi, X, Y, eps0=1e-1, maxdist=1e3, compute_uncertainty=False):
     Ym = Y.mean()
     Yd = Y-Ym
     
-    kdx = cKDTree(X)
-    kdxi = cKDTree(Xi)
-    
-    Rxx = _model_covariance_matrix(model, kdx, kdx, maxdist=maxdist) \
-            + sparse.diags(eps0*np.ones_like(Y), 0)
-    Rxy = _model_covariance_matrix(model, kdx, kdxi, maxdist=maxdist)
+    if use_kd_trees:
+        kdx = scipy.spatial.cKDTree(X)
+        kdxi = scipy.spatial.cKDTree(Xi)
+        Rxx = _model_covariance_matrix_kd(model, kdx, kdx, maxdist=maxdist) \
+                + sparse.diags(eps0*np.ones_like(Y), 0)
+        Rxy = _model_covariance_matrix_kd(model, kdx, kdxi, maxdist=maxdist)
 
-    Rxx_inv = splinalg.inv(Rxx)
+        Rxx_inv = splinalg.inv(Rxx)
+        alpha = Rxx_inv*Rxy
+        # all matrices are CSC
+        Yi = alpha.T*Yd + Ym
 
-    alpha = Rxx_inv*Rxy
-    # all matrices are CSC
-    Yi = alpha.T*Yd + Ym
-    if compute_uncertainty:
-        Ryy = _model_covariance_matrix(model, kdxi, kdxi, maxdist=maxdist)
-        epsi = _uncertainty(Ryy, Rxy, Rxx_inv)
+        if compute_uncertainty:
+            Ryy = _model_covariance_matrix_kd(model, kdxi, kdxi, maxdist=maxdist)
+            epsi = _uncertainty(Ryy, Rxy, Rxx_inv)
+        else:
+            epsi = np.nan*np.empty_like(Yi)
+
     else:
-        epsi = np.nan*np.empty_like(Yi)
+        if hasattr(eps0, "__iter__"):
+            Rxx = _model_covariance_matrix(model, X, X) + np.diag(eps0)
+        else:
+            Rxx = _model_covariance_matrix(model, X, X) + np.diag(eps0*np.ones_like(Y))
+        Rxy = _model_covariance_matrix(model, X, Xi)
+
+        Rxx_inv = np.linalg.inv(Rxx)
+        alpha = np.dot(Rxx_inv, Rxy)
+        Yi = np.dot(alpha.T, Yd) + Ym
+
+        if compute_uncertainty:
+            Ryy = _model_covariance_matrix(model, Xi, Xi)
+            epsi = _uncertainty(Ryy, Rxy, Rxx_inv)
+        else:
+            epsi = np.nan*np.empty_like(Yi)
+
     return Yi, epsi
 
 def _subset_data(X, Y, n):
