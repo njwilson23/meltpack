@@ -4,7 +4,7 @@ import MELTPACK.divergence
 
 class DivergenceTests(unittest.TestCase):
 
-    def test_mms_1(self):
+    def test_analytical_1(self):
         x, y = np.meshgrid(np.linspace(0, 1, 200), np.linspace(0, 1, 200))
         utest = x**2
         vtest = x*y
@@ -14,7 +14,7 @@ class DivergenceTests(unittest.TestCase):
         div = MELTPACK.divergence.divergence(1/200, 1/200, htest, utest, vtest)
         self.assertTrue(np.mean(np.abs(ans[1:-1,1:-1]-div)) < 0.012)
 
-    def test_mms_2(self):
+    def test_analytical_2(self):
         x, y = np.meshgrid(np.linspace(0, 1, 200), np.linspace(0, 1, 200))
 
         utest = -np.sin(5*x)
