@@ -46,8 +46,7 @@ def compute_vertical_corrections(grid_fnms, min_pixel_overlap=1000, weighting_fu
         
         n = utilities.count_shared_pixels(dem0, dem1)
         if n >= min_pixel_overlap:
-            #CD.append(np.nanmean(dem0.values-dem1.values))
-            CD.append(utilities.mean_pixel_difference(dem0, dem1))
+            CD.append(np.mean(utilities.difference_shared_pixels(dem0, dem1)))
             #S.append(np.nanstd(dem0.values-dem1.values))
         else:
             CD.append(np.nan)
@@ -74,5 +73,5 @@ def compute_vertical_corrections(grid_fnms, min_pixel_overlap=1000, weighting_fu
     # Solve the least-squares problem
     dz = np.linalg.solve(np.dot(np.dot(Ca.T, Winv), Ca),
                          np.dot(np.dot(Ca.T, Winv), -CaD))
-    corrections = {fnm: _dz for fnm, _dz in zip(corrected_dems, dz)}
+    corrections = {fnm: _dz for fnm, _dz in zip(corrected_grids, dz)}
     return corrections
