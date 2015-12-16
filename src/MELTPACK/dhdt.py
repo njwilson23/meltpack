@@ -61,6 +61,6 @@ def lagrangian_dhdt(g1, g2, uvel, vvel, timespan=datetime.timedelta(days=1)):
     z2 = g2.sample(x+dx, y+dy)
 
     # limit results to where data exists in both grids
-    m = ~np.isnan(z1) | ~np.isnan(z2)
+    m = ~np.isnan(z1) & ~np.isnan(z2)
     return np.vstack([x[m], y[m], dx[m], dy[m], z1[m], z2[m]])
 
