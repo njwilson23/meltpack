@@ -61,14 +61,20 @@ def compute_vertical_corrections(grid_fnms, min_pixel_overlap=1000, weighting_fu
     Ca = Ca[:,~np.all(Ca==0, axis=0)]   # Drop DEMs not involved in remaining relations
 
     # Compute weights
-    Wdiag = np.zeros(len(Ca))
+    Wdiag = np.zeros(len(Ca)+1)     # size +1 to leave room for constraint
     for i,row in enumerate(Ca):
         fnm1 = corrected_grids[np.argmin(row)]
         fnm2 = corrected_grids[np.argmax(row)]
         Wdiag[i] = weighting_func(fnm1, fnm2)
+    Wdiag[-1] = 1.0
 
     W = np.diag(Wdiag)
     Winv = np.linalg.inv(W)
+
+    # Add a constraint to pin the solution in z (first DEM held fixed)
+    # otherwise there are infinite solutions dz + constant
+    Ca = np.vstack([Ca, np.r_[1, np.zeros(Ca.shape[1]-1)]])
+    CaD = np.r_[CaD, 0.0]
 
     # Solve the least-squares problem
     dz = np.linalg.solve(np.dot(np.dot(Ca.T, Winv), Ca),
