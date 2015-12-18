@@ -1,5 +1,22 @@
 """
 Functions to compute least-squares corrections to smoothly mosaic DEMs
+
+Method:
+
+    Defines a comparison matrix C (n x m) where m is the number of DEMs and n =
+    binom(m, 2).
+
+    Compute the vector matrix product CD, which is the DEM differences.
+
+    Mask out parts of the system corresponding to non-overlapping DEMs and
+    unconstrained DEMs, giving C' and CD'
+
+    Compute diagonal matrix of weights W based on the time difference between
+    DEMs. This makes only makes sense if the DEM differences are over the ice
+    (and liable to change with time), and not in bedrock polygons.
+
+    Solve the least squares system C'^T inv(W) C' dZ = C'T inv(W) CD' for the
+    vertical correction vector dZ.
 """
 
 import itertools
@@ -19,13 +36,8 @@ def _comparison_matrix(n):
     C[I,J1] = -1.0
     return c, C
 
-def count_overlapping_pixels(grid1, grid2):
-    """ Returns the number of non-NaN pixels that overlap between two grids with
-    the same size and geotransform.
-    """
-    return np.sum(~np.isnan(grid1.values) & ~np.isnan(grid2.values))
-
-def compute_vertical_corrections(grid_fnms, min_pixel_overlap=1000, weighting_func=None):
+def compute_vertical_corrections(grid_fnms, min_pixel_overlap=100,
+    weighting_func=None, polymasks=()):
     """ Perform pairwaise comparisons of a list of DEMs and return a dictionary
     of {filename -> vertical correction} that minimizes the misfit between
     overlapping DEMs, subject to weights from *weighting_func(fnm1, fnm2)*.
@@ -43,7 +55,33 @@ def compute_vertical_corrections(grid_fnms, min_pixel_overlap=1000, weighting_fu
     for i, j in c:
         dem0 = karta.read_gtiff(grid_fnms[i])
         dem1 = karta.read_gtiff(grid_fnms[j])
-        
+        dem0.values[dem0.values<-1000000] = np.nan
+        dem1.values[dem1.values<-1000000] = np.nan
+
+        # If bedrock regions are provided, limit the overlapping pixel counts
+        # the regions inside the bedrock masking polygons.
+        # Iterate through all polygons, keeping track of pixels that are in at
+        # least one polygon in the *mask_count* array variables.
+        # Then, set all DEM pixel where *mask_count* is zero to NODATA
+        if polymasks is not None and len(polymasks)!=0:
+            mask_count0 = np.zeros(dem0.size, dtype=np.int16)
+            mask_count1 = np.zeros(dem1.size, dtype=np.int16)
+            for poly in polymasks:
+
+                x = [a[0] for a in poly.vertices]
+                y = [a[1] for a in poly.vertices]
+
+                ny, nx = dem0.size
+                msk0 = karta.raster.grid.mask_poly(x, y, nx, ny, dem0.transform)
+                ny, nx = dem1.size
+                msk1 = karta.raster.grid.mask_poly(x, y, nx, ny, dem1.transform)
+
+                mask_count0[msk0] += 1
+                mask_count1[msk0] += 1
+
+            dem0.values[mask_count0==0] = dem0.nodata
+            dem1.values[mask_count0==0] = dem1.nodata
+
         n = utilities.count_shared_pixels(dem0, dem1)
         if n >= min_pixel_overlap:
             CD.append(np.mean(utilities.difference_shared_pixels(dem0, dem1)))
@@ -79,5 +117,4 @@ def compute_vertical_corrections(grid_fnms, min_pixel_overlap=1000, weighting_fu
     # Solve the least-squares problem
     dz = np.linalg.solve(np.dot(np.dot(Ca.T, Winv), Ca),
                          np.dot(np.dot(Ca.T, Winv), -CaD))
-    corrections = {fnm: _dz for fnm, _dz in zip(corrected_grids, dz)}
-    return corrections
+    return {fnm: _dz for fnm, _dz in zip(corrected_grids, dz)}
