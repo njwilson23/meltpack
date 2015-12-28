@@ -23,7 +23,7 @@ C	NPLR    real Array  I	Actual size of reference subimage:
 C				number of pixels per line, and number of
 C				lines.
 C	CSMIN	Real	    I	Minimum acceptable correlation strength.
-C	MFIT	Integer	    I	Method of fitting surface 
+C	MFIT	Integer	    I	Method of fitting surface
 C				 1 - Elliptical paraboloid
 C				 2 - Elliptical Gaussian
 C				 3 - Reciprocal Paraboloid
@@ -31,13 +31,13 @@ C				 4 - Round to nearest integers
 C	DDMAX	Real	    I	Maximum allowed diagonal displacement
 C				from nominal tiepoint location to
 C				location found by correlation.
-C	IOFFRQ	real Array  I	Requested maximum horizontal and 
+C	IOFFRQ	real Array  I	Requested maximum horizontal and
 C				vertical search offsets.
 C	NOMOFF	real Array  I	Nominal horizontal and vertical offsets
 C				of upper left corner of reference
 C				subimage relative to search subimage.
 C	IACREJ	Integer	    O	Accept/Reject code (see geompak.h)
-C	STRENG	Real	    O	Strength of correlation 
+C	STRENG	Real	    O	Strength of correlation
 C	BFOFFS	Real Array  O	Best-fit horizontal (pixel) and vertical
 C				(line) offsets of correlation peak
 C				relative to nominal input location.
@@ -82,7 +82,7 @@ c
 C**   ALGORITHM DESCRIPTION
 C
 C	    Compute raw cross-product sums
-C	    Compute and tabulate normalized cross-correlation values 
+C	    Compute and tabulate normalized cross-correlation values
 C	    Evaluate strength of correlation peak
 C	    IF peak not rejected as too weak or too close to edge THEN
 C		IF surface fitting specified THEN
@@ -107,24 +107,22 @@ C**         Return
 c
 c****************************************************************************
       SUBROUTINE gcorr(images, imager, npls, nplr, csmin, mfit,
-     .			  ddmx, ioffrq, nomoff, iacrej, streng, bfoffs,
-     .			  tlerrs, ddact)
+     .      ddmx, ioffrq, nomoff,
+     .      iacrej, streng, bfoffs, tlerrs, ddact)
 C
 C
-      real	imager(1),	images(1)
-      real	ioffrq(2),	nomoff(2),	nplr(2),
-     .		npls(2)
-      integer	iacrej,		mfit
-      real	bfoffs(2),	tlerrs(3)
-      real	csmin,		ddact,		ddmx,
-     .		streng
+      real      imager(1), images(1)
+      real      ioffrq(2), nomoff(2), nplr(2), npls(2)
+      integer   iacrej, mfitunormc
+      real      bfoffs(2), tlerrs(3)
+      real      csmin, ddact, ddmx, streng
 C
 C  Specification of Local Variables and Arrays
 C---------------------------------------------
-      integer	ipkcol(32),	ipkrow(32), jnpls(2), jnplr(2)
-      real	ccnorm(16641),	cpval(25),	pkoffs(2),
-     .		pkval(32),	sums(2),	unormc(16641)
-      integer  ncol,nrow
+      integer   ipkcol(32), ipkrow(32), jnpls(2), jnplr(2)
+      real      ccnorm(16641), cpval(25), pkoffs(2),
+     .          pkval(32), sums(2), unormc(16641)
+      integer   ncol, nrow
 C
 C  Compute raw cross-product sums
 C--------------------------------
@@ -132,47 +130,46 @@ C--------------------------------
 C
 C  Compute normalized cross-correlation values and compile statistics
 C--------------------------------------------------------------------
-      call gnorm(imager, images, nplr, npls, unormc, ccnorm, pkval,
-     .		   ipkcol, ipkrow, sums)
+      call gnorm(imager, images, nplr, npls, unormc,
+     .           ccnorm, pkval, ipkcol, ipkrow, sums)
 C
 C  Evaluate strength of correlation peak
 C---------------------------------------
-        ncol=nint(npls(1))-nint(nplr(1))+1
-        nrow=nint(npls(2))-nint(nplr(2))+1
-      call eval(ncol,
-     .            nrow,
-     .		  ccnorm, pkval, ipkcol, ipkrow, sums, csmin, streng,
-     .		  iacrej, cpval)
+      ncol=nint(npls(1))-nint(nplr(1))+1
+      nrow=nint(npls(2))-nint(nplr(2))+1
+      call eval(ncol, nrow, ccnorm, pkval, ipkcol, ipkrow, sums, csmin,
+     .          streng, iacrej, cpval)
 C
 C  Determine offsets of peak relative to nominal location
 C--------------------------------------------------------
       if (iacrej.eq.1) then
-	  if (mfit.ne.4) then
-	      call fitreg(cpval, mfit, pkoffs, tlerrs)
-	      bfoffs(1) = (ipkcol(1) - 1) - nomoff(1) + pkoffs(1)
-	      bfoffs(2) = (ipkrow(1) - 1) - nomoff(2) + pkoffs(2)
-	  else
-	      bfoffs(1) = (ipkcol(1) - 1) - nomoff(1)
-	      bfoffs(2) = (ipkrow(1) - 1) - nomoff(2)
-	      tlerrs(1) = 0.5
-	      tlerrs(2) = 0.5
-	  end if
+    	  if (mfit.ne.4) then
+    	      call fitreg(cpval, mfit, pkoffs, tlerrs)
+    	      bfoffs(1) = (ipkcol(1) - 1) - nomoff(1) + pkoffs(1)
+    	      bfoffs(2) = (ipkrow(1) - 1) - nomoff(2) + pkoffs(2)
+    	  else
+    	      bfoffs(1) = (ipkcol(1) - 1) - nomoff(1)
+    	      bfoffs(2) = (ipkrow(1) - 1) - nomoff(2)
+    	      tlerrs(1) = 0.5
+    	      tlerrs(2) = 0.5
+    	  end if
 C
-C  Determine diagonal displacement from nominal and check against maximum 
+C  Determine diagonal displacement from nominal and check against maximum
 C  acceptable value
 C------------------
-	  ddact = sqrt(bfoffs(1)**2 + bfoffs(2)**2)
-	  if (ddmx.gt.0.0) then
-	  	if (ddact.gt.ddmx) then
-	      		iacrej = 5
-	  	end if
-	  else
-	  	if ( (bfoffs(1)**2 .gt. ioffrq(1)**2) .or. 
-     1         		(bfoffs(2)**2 .gt. ioffrq(2)**2) ) then
-	      	iacrej = 5
-		end if
-	  end if
+    	  ddact = sqrt(bfoffs(1)**2 + bfoffs(2)**2)
+    	  if (ddmx.gt.0.0) then
+    	  	if (ddact.gt.ddmx) then
+    	      		iacrej = 5
+    	  	end if
+    	  else
+    	  	if ( (bfoffs(1)**2 .gt. ioffrq(1)**2) .or.
+     1           (bfoffs(2)**2 .gt. ioffrq(2)**2) ) then
+    	      	iacrej = 5
+    		end if
+    	  end if
 C
       end if
+C
       return
       end
