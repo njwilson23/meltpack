@@ -3,7 +3,7 @@ from Cython.Build import cythonize
 import numpy
 
 CORR_OBJECTS = ["cross.o", "eval.o", "fft2d.o", "fitreg.o", "gcorr.o",
-                "gnorm.o", "kvert.o", "sums.o"]
+                "gnorm.o", "kvert.o", "sums.o", "esterr.o"]
 
 extensions = [Extension("MELTPACK.correlate", ["src/MELTPACK/correlate.pyx"],
                          extra_objects=CORR_OBJECTS,
@@ -21,7 +21,5 @@ setup(
         author="Nat Wilson",
         packages=find_packages("src"),
         package_dir={"": "src"},
-
-        # ext_modules = cythonize("src/MELTPACK/*.pyx"),
         ext_modules = cythonize(extensions),
     )

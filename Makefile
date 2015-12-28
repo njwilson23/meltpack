@@ -1,4 +1,4 @@
-TARGETS = src/cross.o src/eval.o src/fft2d.o src/fitreg.o src/gcorr.o src/gnorm.o src/kvert.o src/sums.o
+TARGETS = src/cross.o src/eval.o src/fft2d.o src/fitreg.o src/gcorr.o src/gnorm.o src/kvert.o src/sums.o src/esterr.o
 
 all: $(TARGETS)
 
