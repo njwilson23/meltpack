@@ -1,17 +1,16 @@
-import cython
+# import cython
 cimport numpy as np
 import numpy as np
 
-
 cdef extern:
-    void gcorr(int* images, int* imager,
+    void gcorr_(float* images, float* imager,
                float* npls, float* nplr, float* csmin,
                int* mfit,
                float* ddmx, float* ioffrq, float* nomoff,
                int* iacrej,
-               float* streng, float* bfoffs, float* tlerrs, float* ddact)
+               float* strength, float* bfoffs, float* tlerrs, float* ddact)
 
-def correlate(int[:,::1] search_img, int[:,::1] ref_img,
+def correlate(float[:,::1] search_img, float[:,::1] ref_img,
               float min_corr_strength=2.0, int fit_method=1, float max_dist=-1,
               float[::1] max_srch_offset=None, float[::1] nominal_offset=None):
     """ Compute correlation offsets between two images.
@@ -33,12 +32,11 @@ def correlate(int[:,::1] search_img, int[:,::1] ref_img,
         `okparam`, `corr_strength`, `best_offsets(2)`, `error_offsets(2)`
     """
     if max_srch_offset is None:
-        max_srch_offset = np.array([64.0, 64.0])
+        max_srch_offset = np.array([64.0, 64.0], dtype=np.float32)
     if nominal_offset is None:
-        nominal_offset = np.array([47.0, 47.0])
+        nominal_offset = np.array([47.0, 47.0], dtype=np.float32)
 
     cdef float[2] search_size, ref_size
-
     cdef int okparam
     cdef float corr_strength
     cdef float[2] best_offsets
@@ -46,8 +44,10 @@ def correlate(int[:,::1] search_img, int[:,::1] ref_img,
     cdef float diag_disp
     cdef float[6] result
 
-    search_size = search_img.shape
-    ref_size = ref_img.shape
+    search_size[0] = search_img.shape[1]
+    search_size[1] = search_img.shape[0]
+    ref_size[0] = ref_img.shape[1]
+    ref_size[1] = ref_img.shape[0]
 
     okparam = 1
     best_offsets[0] = 0.0
@@ -56,11 +56,11 @@ def correlate(int[:,::1] search_img, int[:,::1] ref_img,
     error_offsets[1] = 0.0
 
     # From NSIDC, implemented in fortran
-    gcorr(&search_img[0][0], &ref_img[0][0], &search_size[0], &ref_size[0],
+    # Name mangled according to the GNU/Intel trailing underscore convention
+    gcorr_(&search_img[0][0], &ref_img[0][0], &search_size[0], &ref_size[0],
         &min_corr_strength, &fit_method, &max_dist,
         &max_srch_offset[0], &nominal_offset[0],
-        &okparam, &corr_strength, &best_offsets[0], &error_offsets[0],
-        &diag_disp)
+        &okparam, &corr_strength, &best_offsets[0], &error_offsets[0], &diag_disp)
 
     result[0] = okparam
     result[1] = corr_strength

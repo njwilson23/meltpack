@@ -1,11 +1,11 @@
-TARGETS = src/cross.o src/eval.o src/fft2d.o src/fitreg.o src/gcorr.o src/gnorm.o src/kvert.o src/sums.o src/esterr.o
+TARGETS = cross.o eval.o fft2d.o fitreg.o gcorr.o gnorm.o kvert.o sums.o esterr.o
 
 all: $(TARGETS)
 
-%.o: %.f
+%.o: src/%.f
 	gfortran -c -fPIC $^
 
 clean:
-	find src/ -name "*.o" -print -delete
+	find . -name "*.o" -print -delete
 
 .PHONY: all clean
