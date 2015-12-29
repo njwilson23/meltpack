@@ -165,25 +165,22 @@ C**         Return
 C
 c****************************************************************************
       SUBROUTINE gnorm(imager, images, nplr, npls, unormc, ccnorm,
-     .			   pkval, ipkcol, ipkrow, sums)
-      real	imager(1),	images(1)
-      integer	ipkcol(1),	ipkrow(1)
-      real	ccnorm(1),	pkval(1),	sums(2),
-     .		unormc(1),      nplr(2),        npls(2)
+     .                 pkval, ipkcol, ipkrow, sums)
+      real      imager(1), images(1)
+      integer   ipkcol(1), ipkrow(1)
+      real      ccnorm(1), pkval(1), sums(2),
+     .          unormc(1), nplr(2), npls(2)
 C
 C  Specification of Local Variables and Arrays
 C---------------------------------------------
-      integer	iptr(32),	ixcol(32),
-     .          nsnew(2),       nrnew(2),	ixrow(32)
-      integer	i,	ipfree,		ipt,		j,
-     .	jstart,		jstop,		k,		kol,
-     .	koladd,		kolsub,		line,		lnadd,
-     .	lnsub,		ncol,		nrow,		nrtot,
-     .  igl, iglnew, iglold
-      real colsqr(256),	colsum(256),	xval(32)
-      real refsum,	refsqr,		rho,		rmean,
-     .     rsigma,	rtotal,		sigma1,		sigmas,
-     .     srchsm,	srchsq,		temp,		tempmn
+      integer   iptr(32), ixcol(32),
+     .          nsnew(2), nrnew(2), ixrow(32)
+      integer   i, ipfree, ipt, j, jstart, jstop, k, kol,
+     .          koladd, kolsub, line, lnadd, lnsub, ncol,
+     .          nrow, nrtot, igl, iglnew, iglold
+      real      colsqr(256), colsum(256), xval(32)
+      real      refsum, refsqr, rho, rmean, rsigma, rtotal,
+     .          sigma1, sigmas, srchsm, srchsq, temp, tempmn
 C
 C  Compute pixel-value statistics for reference subimage
 C-------------------------------------------------------
@@ -194,11 +191,11 @@ C-------------------------------------------------------
       refsum = 0
       refsqr = 0
       nrtot = nrnew(1) * nrnew(2)
-      do 100 ipt=1,nrtot
-	  igl = imager(ipt)
-	  refsum = refsum + igl
-	  refsqr = refsqr + igl*igl
- 100  continue
+      do ipt=1,nrtot
+          igl = imager(ipt)
+          refsum = refsum + igl
+          refsqr = refsqr + igl*igl
+      end do
       rtotal = nrtot
       tempmn = .01 * rtotal**2
       rmean = refsum/rtotal
@@ -208,10 +205,10 @@ C  Clear sums and sums of squares of normalized correlation values
 C-----------------------------------------------------------------
       sums(1) = 0.0
       sums(2) = 0.0
-      do 200 k=1,32
-	  xval(k) = -1.0
-	  iptr(k) = k
- 200  continue
+      do k=1,32
+          xval(k) = -1.0
+          iptr(k) = k
+      end do
       ncol = nsnew(1) - nrnew(1) + 1
       nrow = nsnew(2) - nrnew(2) + 1
 C
@@ -219,93 +216,92 @@ C  Compute normalized cross-corr values for one row of alignemnts at a time
 C--------------------------------------------------------------------------
       jstart = 1
       jstop = ncol
-      do 300 i=1,nrow
+      do i=1,nrow
 C
 C  Get column sums and sums of squares for portion of search
 C  subimage overlain by reference in current row of alignments
 C-------------------------------------------------------------
-	  if (i .eq. 1) then
-	      do 310 kol=1,nsnew(1)
-		  colsum(kol) = 0.0
-		  colsqr(kol) = 0.0
- 310          continue
-	      ipt = 1
-	      do 320 line=1,nrnew(2)
-		  do 330 kol=1,nsnew(1)
-		      igl = images(ipt)
-		      colsum(kol) = colsum(kol) + igl
-		      colsqr(kol) = colsqr(kol) + igl*igl
-		      ipt = ipt + 1
- 330    	  continue
- 320          continue
-	  else
-	      lnsub = (i - 2) * nsnew(1)
-	      lnadd = lnsub + nsnew(1)*nrnew(2)
-	      do 340 kol=1,nsnew(1)
-		  iglnew = images(lnadd+kol)
-		  iglold = images(lnsub+kol)
-		  colsum(kol) = colsum(kol) + iglnew - iglold
-		  colsqr(kol) = colsqr(kol) + iglnew*iglnew
-     .				- iglold*iglold
- 340          continue
-	  end if
+          if (i .eq. 1) then
+              do kol=1,nsnew(1)
+                  colsum(kol) = 0.0
+                  colsqr(kol) = 0.0
+              end do
+              ipt = 1
+              do line=1,nrnew(2)
+                  do kol=1,nsnew(1)
+                      igl = images(ipt)
+                      colsum(kol) = colsum(kol) + igl
+                      colsqr(kol) = colsqr(kol) + igl*igl
+                      ipt = ipt + 1
+                  end do
+              end do
+          else
+              lnsub = (i - 2) * nsnew(1)
+              lnadd = lnsub + nsnew(1)*nrnew(2)
+              do kol=1,nsnew(1)
+                  iglnew = images(lnadd+kol)
+                  iglold = images(lnsub+kol)
+                  colsum(kol) = colsum(kol) + iglnew - iglold
+                  colsqr(kol) = colsqr(kol) + iglnew*iglnew
+     .                          - iglold*iglold
+              end do
+          end if
 C
 C  Complete comutation of search-subarea pixel statistics
 C--------------------------------------------------------
-	  do 350 j=jstart,jstop
-	      if (j .eq. jstart) then
-		  srchsm = 0.0
-		  srchsq = 0.0
-		  do 360 kol=1,nrnew(1)
-		      srchsm = srchsm + colsum(kol)
-		      srchsq = srchsq + colsqr(kol)
- 360              continue
-		  temp = amax1(tempmn,(rtotal*srchsq - srchsm*srchsm))
-		  sigmas = sqrt(temp)
-	      else
-		  kolsub = j - jstart
-		  koladd = kolsub + nrnew(1)
-		  srchsm = srchsm + colsum(koladd) - colsum(kolsub)
-		  srchsq = srchsq + colsqr(koladd) - colsqr(kolsub)
-		  temp = amax1(tempmn,(rtotal*srchsq - srchsm*srchsm))
-		  sigma1 = 0.5 * (sigmas + temp/sigmas)
-		  sigmas = 0.5 * (sigma1 + temp/sigma1)
-	      end if
+          do j=jstart,jstop
+              if (j .eq. jstart) then
+                  srchsm = 0.0
+                  srchsq = 0.0
+                  do kol=1,nrnew(1)
+                      srchsm = srchsm + colsum(kol)
+                      srchsq = srchsq + colsqr(kol)
+                  end do
+                  temp = amax1(tempmn,(rtotal*srchsq - srchsm*srchsm))
+                  sigmas = sqrt(temp)
+              else
+                  kolsub = j - jstart
+                  koladd = kolsub + nrnew(1)
+                  srchsm = srchsm + colsum(koladd) - colsum(kolsub)
+                  srchsq = srchsq + colsqr(koladd) - colsqr(kolsub)
+                  temp = amax1(tempmn,(rtotal*srchsq - srchsm*srchsm))
+                  sigma1 = 0.5 * (sigmas + temp/sigmas)
+                  sigmas = 0.5 * (sigma1 + temp/sigma1)
+              end if
 C
 C  Compute normalized cross-correlation value
 C--------------------------------------------
-	      rho = (unormc(j) - rmean*srchsm) / (rsigma*sigmas)
-	      ccnorm(j) = rho
-	      sums(1) = sums(1) + rho
-	      sums(2) = sums(2) + rho*rho
+              rho = (unormc(j) - rmean*srchsm) / (rsigma*sigmas)
+              ccnorm(j) = rho
+              sums(1) = sums(1) + rho
+              sums(2) = sums(2) + rho*rho
 C
 C  Check whether value among top 32
 C----------------------------------
-	      if (rho.gt.xval(iptr(32))) then
-		  k = 32
-		  ipfree = iptr(32)
- 700                  if((k.le.1).or.(rho.le.xval(iptr(k-1))))goto 750
-    		      iptr(k) = iptr(k-1)
-		      k = k - 1
-		      goto 700
- 750		  continue
-		  iptr(k) = ipfree
-		  xval(ipfree) = rho
-		  ixcol(ipfree) = j - jstart + 1
-		  ixrow(ipfree) = i
-	      end if
- 350      continue
-	  jstart = jstart + ncol
-	  jstop =jstop + ncol
- 300  continue
+              if (rho.gt.xval(iptr(32))) then
+                  k = 32
+                  ipfree = iptr(32)
+                  do while ((k.gt.1) .and. (rho.gt.xval(iptr(k-1))))
+                      iptr(k) = iptr(k-1)
+                      k = k - 1
+                  end do
+                  iptr(k) = ipfree
+                  xval(ipfree) = rho
+                  ixcol(ipfree) = j - jstart + 1
+                  ixrow(ipfree) = i
+              end if
+          end do
+          jstart = jstart + ncol
+          jstop =jstop + ncol
+      end do
 C
 C  Copy peak values and coordinates in correct sequence
 C------------------------------------------------------
-      do 400 k=1,32
-	  pkval(k) = xval(iptr(k))
-	  ipkcol(k) = ixcol(iptr(k))
-	  ipkrow(k) = ixrow(iptr(k))
- 400  continue
+      do k=1,32
+          pkval(k) = xval(iptr(k))
+          ipkcol(k) = ixcol(iptr(k))
+          ipkrow(k) = ixrow(iptr(k))
+      end do
 C
       return
       end
