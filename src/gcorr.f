@@ -13,62 +13,62 @@ C    Correlate a reference subimage with a search subimage and
 C    evaluate the results.
 C
 C     Arguments:
-C    Name    Type       I/O    Description
-C    ----    ----       ---    -----------
-C    IMAGES    I*2 Array   I    Search subimage.
-C    IMAGER    I*2 Array   I   Reference subimage.
-C    NPLS    real Array  I   Actual size of search subimage:  number
-C                of pixels per line, and number of lines.
-C    NPLR    real Array  I    Actual size of reference subimage:
-C                number of pixels per line, and number of
-C                lines.
-C    CSMIN    Real        I    Minimum acceptable correlation strength.
-C    MFIT    Integer        I    Method of fitting surface
-C                 1 - Elliptical paraboloid
-C                 2 - Elliptical Gaussian
-C                 3 - Reciprocal Paraboloid
-C                 4 - Round to nearest integers
-C    DDMAX    Real        I    Maximum allowed diagonal displacement
-C                from nominal tiepoint location to
-C                location found by correlation.
-C    IOFFRQ    real Array  I    Requested maximum horizontal and
-C                vertical search offsets.
-C    NOMOFF    real Array  I    Nominal horizontal and vertical offsets
-C                of upper left corner of reference
-C                subimage relative to search subimage.
-C    IACREJ    Integer        O    Accept/Reject code (see geompak.h)
-C    STRENG    Real        O    Strength of correlation
-C    BFOFFS    Real Array  O    Best-fit horizontal (pixel) and vertical
-C                (line) offsets of correlation peak
-C                relative to nominal input location.
-C    TLERRS    Real Array  O    Estimated horizontal error, vertical
-C                error, and h-v cross term in best-fit
-C                offsets.
-C    DDACT    Real        O    Actual diagonal displacement from
-C                nominal tiepoint location to location
-C                found by correlation.
+C    Name    Type       I/O     Description
+C    ----    ----       ---     -----------
+C    IMAGES  I*2 Array   I      Search subimage.
+C    IMAGER  I*2 Array   I      Reference subimage.
+C    NPLS    real Array  I      Actual size of search subimage:  number
+C                               of pixels per line, and number of lines.
+C    NPLR    real Array  I      Actual size of reference subimage:
+C                               number of pixels per line, and number of
+C                               lines.
+C    CSMIN   Real        I      Minimum acceptable correlation strength.
+C    MFIT    Integer     I      Method of fitting surface
+C                               1 - Elliptical paraboloid
+C                               2 - Elliptical Gaussian
+C                               3 - Reciprocal Paraboloid
+C                               4 - Round to nearest integers
+C    DDMAX   Real        I      Maximum allowed diagonal displacement
+C                               from nominal tiepoint location to
+C                               location found by correlation.
+C    IOFFRQ  real Array  I      Requested maximum horizontal and
+C                               vertical search offsets.
+C    NOMOFF  real Array  I      Nominal horizontal and vertical offsets
+C                               of upper left corner of reference
+C                               subimage relative to search subimage.
+C    IACREJ  Integer     O      Accept/Reject code (see geompak.h)
+C    STRENG  Real        O      Strength of correlation
+C    BFOFFS  Real Array  O      Best-fit horizontal (pixel) and vertical
+C                               (line) offsets of correlation peak
+C                               relative to nominal input location.
+C    TLERRS  Real Array  O      Estimated horizontal error, vertical
+C                               error, and h-v cross term in best-fit
+C                               offsets.
+C    DDACT   Real        O      Actual diagonal displacement from
+C                               nominal tiepoint location to location
+C                               found by correlation.
 C
 C     Local Variables and Arrays:
-C    Name    Type        Description
-C    ----    ----        -----------
-C    CCNORM    Real Array  Normalized cross-correlation coefficient for
-C                each search alignment.
-C    CPVAL    Real Array  5 by 5 array of cross-correlation values, in
-C                units of standard deviations above
-C                background, centered on correlation peak.
-C    IPKCOL    Int. Array  Column number for each of top 32 correlation
-C                values.
-C    IPKROW    Int. Array  Row number for each of top 32 correlation
-C                values.
-C    PKOFFS    Real Array  Fractional horizontal and vertical offsets
-C                of best-fit peak location from nearest
-C                integer location.
-C    PKVAL    Real Array  Largest 32 values of normalized cross-
-C                correlation coefficients.
-C    SUMS    Real Array  Sum and sum of squares of all cross-
-C                correlation values.
-C    UNORMC    Real Array  Unnormalized cross-product sums for each
-C                alignment.
+C    Name    Type           Description
+C    ----    ----           -----------
+C    CCNORM  Real Array     Normalized cross-correlation coefficient for
+C                           each search alignment.
+C    CPVAL   Real Array     5 by 5 array of cross-correlation values, in
+C                           units of standard deviations above
+C                           background, centered on correlation peak.
+C    IPKCOL  Int. Array     Column number for each of top 32 correlation
+C                           values.
+C    IPKROW  Int. Array     Row number for each of top 32 correlation
+C                           values.
+C    PKOFFS  Real Array     Fractional horizontal and vertical offsets
+C                           of best-fit peak location from nearest
+C                           integer location.
+C    PKVAL   Real Array     Largest 32 values of normalized cross-
+C                           correlation coefficients.
+C    SUMS    Real Array     Sum and sum of squares of all cross-
+C                           correlation values.
+C    UNORMC  Real Array     Unnormalized cross-product sums for each
+C                           alignment.
 C
 C     Program History:
 C    Version      Date          Author    Code/Contr.    Change Request
@@ -90,8 +90,7 @@ C            Do surface fit
 C            Add offsets returned by surface fit to the offsets from
 C             edges of full array to center of 5 by 5 subarray
 C        ELSE
-C            Enter integer offsets at array peak as best-fit
-C             values
+C            Enter integer offsets at array peak as best-fit values
 C            Enter (0.5, 0.5) as estimated errors
 C        END-IF
 C        Compute diagonal displacement from nominal location
