@@ -60,10 +60,13 @@ def correlate(float[:,::1] srch_img, float[:,::1] ref_img,
     cdef float[2] srch_size, ref_size
     cdef int okparam
     cdef float corr_strength
-    cdef float[2] best_offsets
-    cdef float[2] error_offsets
+    cdef float[:] best_offsets
+    cdef float[:] error_offsets
     cdef float diag_disp
     cdef float[:] result
+
+    error_offsets = np.empty(2, dtype=np.float32)
+    best_offsets = np.empty(2, dtype=np.float32)
     result = np.empty(7, dtype=np.float32)
 
     srch_size[0] = srch_img.shape[1]
@@ -91,7 +94,7 @@ def correlate(float[:,::1] srch_img, float[:,::1] ref_img,
     gcorr_(&srch_img[0][0], &ref_img[0][0], srch_size, ref_size,
         &min_corr_strength, &fit_method, &max_dist,
         &max_srch_offset[0], &nominal_offset[0],
-        &okparam, &corr_strength, best_offsets, error_offsets, &diag_disp)
+        &okparam, &corr_strength, &best_offsets[0], &error_offsets[0], &diag_disp)
 
     result[0] = okparam
     result[1] = corr_strength
