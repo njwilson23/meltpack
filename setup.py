@@ -5,7 +5,7 @@ import numpy
 CORR_OBJECTS = ["cross.o", "eval.o", "fft2d.o", "fitreg.o", "gcorr.o",
                 "gnorm.o", "kvert.o", "sums.o", "esterr.o"]
 
-extensions = [Extension("MELTPACK.correlate", ["src/MELTPACK/correlate.pyx"],
+extensions = [Extension("MELTPACK.c_correlate", ["src/MELTPACK/c_correlate.pyx"],
                          extra_objects=CORR_OBJECTS,
                          include_dirs=[numpy.get_include(),
                                        "/usr/lib/gcc/x86_64-linux-gnu/5"],
