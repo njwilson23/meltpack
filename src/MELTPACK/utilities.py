@@ -1,7 +1,7 @@
 import karta
 import numpy as np
 
-def _overlap_bbox(bbox1, bbox2):
+def overlap_bbox(bbox1, bbox2):
     bbox = [max(bbox1[0], bbox2[0]), max(bbox1[1], bbox2[1]),
             min(bbox1[2], bbox2[2]), min(bbox1[3], bbox2[3])]
     if (bbox[0] > bbox[2]) or (bbox[1] > bbox[3]):
@@ -26,7 +26,7 @@ def apply_shared_pixels(func, scene1, scene2, nodata=None):
 
     assert(isnodata(scene2.nodata))         # require scenes to use same nodata
 
-    bbox = _overlap_bbox(bbox1, bbox2)
+    bbox = overlap_bbox(bbox1, bbox2)
     dx, dy = scene1.transform[2:4]
     bbox = (bbox[0]+dx/2, bbox[1]+dy/2, bbox[2]-dx/2, bbox[3]-dy/2)
 
@@ -99,7 +99,7 @@ def count_shared_pixels(scene1, scene2, bbox1=None, bbox2=None, nodata=None):
     assert(isnodata(scene2.nodata))         # require scenes to use same nodata
 
     try:
-        bbox = _overlap_bbox(bbox1, bbox2)
+        bbox = overlap_bbox(bbox1, bbox2)
         dx, dy = scene1.transform[2:4]
         bbox = (bbox[0]+dx/2, bbox[1]+dy/2, bbox[2]-dx/2, bbox[3]-dy/2)
     except ValueError:
