@@ -5,17 +5,17 @@ import numpy
 CORR_OBJECTS = ["cross.o", "eval.o", "fft2d.o", "fitreg.o", "gcorr.o",
                 "gnorm.o", "kvert.o", "sums.o", "esterr.o"]
 
-extensions = [Extension("MELTPACK.c_correlate", ["src/MELTPACK/c_correlate.pyx"],
+extensions = [Extension("meltpack.c_correlate", ["src/meltpack/c_correlate.pyx"],
                          extra_objects=CORR_OBJECTS,
                          include_dirs=[numpy.get_include(),
                                        "/usr/lib/gcc/x86_64-linux-gnu/5"],
                          libraries=["gfortran"]),
-               Extension("MELTPACK._divergence", ["src/MELTPACK/_divergence.pyx"],
+               Extension("meltpack._divergence", ["src/meltpack/_divergence.pyx"],
                           include_dirs=[numpy.get_include()])
 ]
 
 setup(
-        name="MELTPACK",
+        name="meltpack",
         version="0.1a2",
         description="Tools for estimating ice shelf melt rates",
         author="Nat Wilson",
