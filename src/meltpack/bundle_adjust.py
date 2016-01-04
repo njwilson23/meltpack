@@ -68,8 +68,8 @@ def compute_vertical_corrections(grid_fnms, min_pixel_overlap=100,
             mask_count1 = np.zeros(dem1.size, dtype=np.int16)
             for poly in polymasks:
 
-                x = [a[0] for a in poly.vertices]
-                y = [a[1] for a in poly.vertices]
+                x = [a[0] for a in poly.get_vertices(dem0.crs)]
+                y = [a[1] for a in poly.get_vertices(dem0.crs)]
 
                 ny, nx = dem0.size
                 msk0 = karta.raster.grid.mask_poly(x, y, nx, ny, dem0.transform)
