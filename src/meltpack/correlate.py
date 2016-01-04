@@ -64,8 +64,6 @@ def correlate_scenes(scene1, scene2, search_size=(256, 256), ref_size=(32, 32),
     bboxc = utilities.overlap_bbox(scene1.data_bbox, scene2.data_bbox)
     scene1c = scene1.clip(bboxc[0], bboxc[2], bboxc[1], bboxc[3])
     scene2c = scene2.clip(bboxc[0], bboxc[2], bboxc[1], bboxc[3])
-    # scene1c = scene1
-    # scene2c = scene2
     dx, dy = scene2c.transform[2:4]
 
     points = []
