@@ -118,6 +118,9 @@ def count_shared_pixels(scene1, scene2, bbox1=None, bbox2=None, nodata=None):
     if nx != (idx_bounds2[1][1] - idx_bounds2[0][1]):
         print("WARNING: incompatible swath sizes in count_shared_pixels")
 
+    if (nx == 0) or (ny == 0):
+        return 0
+
     bandwidth = 1000000 // nx      # assuming 4-byte numbers and 400 mb memory use (conservative)
     pixel_count = 0
     i = 0
