@@ -59,7 +59,7 @@ def _do_correlation(search_img, ref_img, center_coords):
     return ref_center, (x_displ, y_displ), strength
 
 def correlate_scenes(scene1, scene2, search_size=(256, 256), ref_size=(32, 32),
-        resolution=(16, 16)):
+        resolution=(16, 16), nprocs=None):
 
     bboxc = utilities.overlap_bbox(scene1.data_bbox, scene2.data_bbox)
     scene1c = scene1.clip(bboxc[0], bboxc[2], bboxc[1], bboxc[3])
@@ -70,8 +70,10 @@ def correlate_scenes(scene1, scene2, search_size=(256, 256), ref_size=(32, 32),
     displs = []
     strengths = []
 
-    nprocs = cpu_count()
-    overlap = (ref_size[0]-resolution[0], ref_size[1]-resolution[1])
+    if nprocs is None:
+        nprocs = cpu_count()
+    # overlap = (ref_size[0]-resolution[0], ref_size[1]-resolution[1])
+    overlap = (0, 0)
 
     for chunk1, chunk2 in zip(scene1c.aschunks(search_size, ref_size),
                               scene2c.aschunks(search_size, ref_size)):
