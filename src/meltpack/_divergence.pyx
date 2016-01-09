@@ -29,7 +29,7 @@ def divergence(DTYPE_t dx, DTYPE_t dy,
     nx = h.shape[1]
     xfluxes = np.zeros([ny, nx-1], dtype=DTYPE)
     yfluxes = np.zeros([ny-1, nx], dtype=DTYPE)
-    div = np.zeros([ny-2, nx-2], dtype=DTYPE)
+    div = np.nan*np.zeros([ny-2, nx-2], dtype=DTYPE)
 
     # Compute fluxes in x direction
     for i in range(ny):
