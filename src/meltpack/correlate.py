@@ -1,5 +1,6 @@
 from __future__ import division
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import (ThreadPoolExecutor, as_completed, wait,
+                                FIRST_COMPLETED, ALL_COMPLETED)
 from multiprocessing import cpu_count
 import numpy as np
 from scipy import signal
@@ -66,19 +67,30 @@ def correlate_scenes(scene1, scene2, searchsize=(256, 256), refsize=(32, 32),
         nprocs = cpu_count()
 
     overlap = ((searchsize[0]-resolution[0]), (searchsize[1]-resolution[1]))
+    dx, dy = scene1c.transform[2:4]
+    pad = ((searchsize[0]-refsize[0])//2, (searchsize[1]-refsize[1])//2)
 
     with ThreadPoolExecutor(nprocs) as executor:
 
         futures = []
         for refchunkbig, searchchunk in zip(scene1c.aschunks(searchsize, overlap),
                                             scene2c.aschunks(searchsize, overlap)):
+
             if searchchunk.size == (searchsize):
+
+                if len(futures) == 5000:
+                    for fut in as_completed(futures):
+                        ref_center, displ, strength = fut.result()
+
+                        points.append(ref_center)
+                        displs.append(displ)
+                        strengths.append(strength)
+                    futures = []
+
                 searchimage = searchchunk.values
-                pad = ((searchsize[0]-refsize[0])//2, (searchsize[1]-refsize[1])//2)
                 refimage = refchunkbig.values[pad[0]:pad[0]+refsize[0], pad[1]:pad[1]+refsize[1]]
 
                 bbox = refchunkbig.bbox
-                dx, dy = refchunkbig.transform[2:4]
                 refcenter = (bbox[0]+dx*(pad[0]+0.5*refsize[0]),
                              bbox[1]+dy*(pad[1]+0.5*refsize[1]))
 
