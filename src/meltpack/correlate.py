@@ -44,22 +44,14 @@ def correlate_chips(search_chip, ref_chip, mode="valid"):
     i, j = findpeak(c)
     return findoffset(search_chip.shape, (i, j)), c[i,j]
 
-def _do_correlation(search_img, ref_img, center_coords):
-    (x, y), strength = correlate_chips(search_img.values, ref_img.values)
+def _do_correlation(searchimage, refimage, refcenter, dx, dy):
+    (x, y), strength = correlate_chips(searchimage, refimage, mode="same")
+    x_displ = x*dx
+    y_displ = y*dy
+    return refcenter, (x_displ, y_displ), strength
 
-    # compute the offsets in geographical units
-    ref_bbox = ref_img.bbox
-    ref_center = (0.5 * (ref_bbox[0] + ref_bbox[2]),
-                  0.5 * (ref_bbox[1] + ref_bbox[3]))
-    dx, dy = search_img.transform[2:4]
-    xg = center_coords[0] + x*dx
-    yg = center_coords[1] + y*dy
-    x_displ = ref_center[0] - xg
-    y_displ = ref_center[1] - yg
-    return ref_center, (x_displ, y_displ), strength
-
-def correlate_scenes(scene1, scene2, search_size=(256, 256), ref_size=(32, 32),
-        resolution=(16, 16), nprocs=None):
+def correlate_scenes(scene1, scene2, searchsize=(256, 256), refsize=(32, 32),
+        resolution=(128, 128), nprocs=None):
 
     bboxc = utilities.overlap_bbox(scene1.data_bbox, scene2.data_bbox)
     scene1c = scene1.clip(bboxc[0], bboxc[2], bboxc[1], bboxc[3])
@@ -72,29 +64,33 @@ def correlate_scenes(scene1, scene2, search_size=(256, 256), ref_size=(32, 32),
 
     if nprocs is None:
         nprocs = cpu_count()
-    # overlap = (ref_size[0]-resolution[0], ref_size[1]-resolution[1])
-    overlap = (0, 0)
 
-    for chunk1, chunk2 in zip(scene1c.aschunks(search_size, ref_size),
-                              scene2c.aschunks(search_size, ref_size)):
+    overlap = ((searchsize[0]-resolution[0]), (searchsize[1]-resolution[1]))
 
-        bbox1 = chunk1.bbox
-        bbox2 = chunk2.bbox
-        search_center = (0.5 * (bbox1[0] + bbox1[2]),
-                         0.5 * (bbox1[1] + bbox1[3]))
+    with ThreadPoolExecutor(nprocs) as executor:
 
         futures = []
-        with ThreadPoolExecutor(nprocs) as executor:
-            for ref_chip in chunk2.aschunks(ref_size, overlap):
-                fut = executor.submit(_do_correlation, chunk1, ref_chip,
-                                      search_center)
+        for refchunkbig, searchchunk in zip(scene1c.aschunks(searchsize, overlap),
+                                            scene2c.aschunks(searchsize, overlap)):
+            if searchchunk.size == (searchsize):
+                searchimage = searchchunk.values
+                pad = ((searchsize[0]-refsize[0])//2, (searchsize[1]-refsize[1])//2)
+                refimage = refchunkbig.values[pad[0]:pad[0]+refsize[0], pad[1]:pad[1]+refsize[1]]
+
+                bbox = refchunkbig.bbox
+                dx, dy = refchunkbig.transform[2:4]
+                refcenter = (bbox[0]+dx*(pad[0]+0.5*refsize[0]),
+                             bbox[1]+dy*(pad[1]+0.5*refsize[1]))
+
+                fut = executor.submit(_do_correlation, searchimage, refimage,
+                                      refcenter, dx, dy)
                 futures.append(fut)
 
-            for fut in as_completed(futures):
-                ref_center, displ, strength = fut.result()
+        for fut in as_completed(futures):
+            ref_center, displ, strength = fut.result()
 
-                points.append(ref_center)
-                displs.append(displ)
-                strengths.append(strength)
+            points.append(ref_center)
+            displs.append(displ)
+            strengths.append(strength)
 
     return points, displs, strengths
