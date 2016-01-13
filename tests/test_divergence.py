@@ -1,6 +1,7 @@
 import unittest
 import numpy as np
-import MELTPACK.divergence
+import meltpack.divergence
+import matplotlib.pyplot as plt
 
 class DivergenceTests(unittest.TestCase):
 
@@ -11,8 +12,8 @@ class DivergenceTests(unittest.TestCase):
         htest = np.ones_like(x)
 
         ans = 3*x   # analytical
-        div = MELTPACK.divergence.divergence(1/200, 1/200, htest, utest, vtest)
-        self.assertTrue(np.mean(np.abs(ans[1:-1,1:-1]-div)) < 0.012)
+        div = meltpack.divergence.divergence(1/200, 1/200, htest, utest, vtest)
+        self.assertTrue(np.mean(np.abs(ans[2:-1,2:-1]-div[1:,1:])) < 0.012)
 
     def test_analytical_2(self):
         x, y = np.meshgrid(np.linspace(0, 1, 200), np.linspace(0, 1, 200))
@@ -22,8 +23,8 @@ class DivergenceTests(unittest.TestCase):
         htest = np.ones_like(x)
 
         ans = -5*np.cos(5*x) + 2*x*y    # analytical
-        div = MELTPACK.divergence.divergence(1/200, 1/200, htest, utest, vtest)
-        self.assertTrue(np.mean(np.abs(ans[1:-1,1:-1]-div)) < 0.12)
+        div = meltpack.divergence.divergence(1/200, 1/200, htest, utest, vtest)
+        self.assertTrue(np.mean(np.abs(ans[2:-1,2:-1]-div[1:,1:])) < 0.12)
 
 if __name__ == "__main__":
     unittest.main()
