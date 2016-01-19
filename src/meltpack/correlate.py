@@ -78,7 +78,7 @@ def correlate_scenes(scene1, scene2, searchsize=(256, 256), refsize=(32, 32),
 
             if searchchunk.size == (searchsize):
 
-                if len(futures) == 5000:
+                if len(futures) == 2000:
                     for fut in as_completed(futures):
                         ref_center, displ, strength = fut.result()
 
