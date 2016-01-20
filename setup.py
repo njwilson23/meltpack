@@ -11,7 +11,9 @@ extensions = [Extension("meltpack.c_correlate", ["src/meltpack/c_correlate.pyx"]
                                        "/usr/lib/gcc/x86_64-linux-gnu/5"],
                          libraries=["gfortran"]),
                Extension("meltpack._divergence", ["src/meltpack/_divergence.pyx"],
-                          include_dirs=[numpy.get_include()])
+                          include_dirs=[numpy.get_include()]),
+               Extension("meltpack._smooth", ["src/meltpack/_smooth.pyx"],
+                          include_dirs=[numpy.get_include()]),
 ]
 
 setup(
