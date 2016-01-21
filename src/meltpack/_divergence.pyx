@@ -9,6 +9,12 @@ def divergence(DTYPE_t dx, DTYPE_t dy,
                np.ndarray[DTYPE_t, ndim=2] u,
                np.ndarray[DTYPE_t, ndim=2] v):
     """ Return the divergence of a vector field using upwind finite volumes.
+
+    Computes
+    
+        div(h . <u,v>)
+
+        == h * (du/dx + dv/dy) + u*dh/dx + v*dh/dy
     
     Arguments
     ---------

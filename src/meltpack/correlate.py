@@ -73,8 +73,8 @@ def correlate_scenes(scene1, scene2, searchsize=(256, 256), refsize=(32, 32),
     with ThreadPoolExecutor(nprocs) as executor:
 
         futures = []
-        for refchunkbig, searchchunk in zip(scene1c.aschunks(searchsize, overlap),
-                                            scene2c.aschunks(searchsize, overlap)):
+        for refchunkbig, searchchunk in zip(scene1c.aschunks(searchsize, overlap, copy=False),
+                                            scene2c.aschunks(searchsize, overlap, copy=False)):
 
             if searchchunk.size == (searchsize):
 
@@ -105,4 +105,4 @@ def correlate_scenes(scene1, scene2, searchsize=(256, 256), refsize=(32, 32),
             displs.append(displ)
             strengths.append(strength)
 
-    return points, displs, strengths
+    return np.array(points), np.array(displs), np.array(strengths)

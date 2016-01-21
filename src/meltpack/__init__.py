@@ -1,4 +1,5 @@
 from . import divergence
+from . import smooth
 from . import correlate
 from . import gaussmarkov
 from . import alphashapes

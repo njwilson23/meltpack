@@ -4,6 +4,8 @@ import datetime
 import karta
 import numpy as np
 
+from . import correlate
+
 def lagrangian_dhdt(g1, g2, uvel, vvel, timespan=datetime.timedelta(days=1)):
     """ Compute the Lagrangian time derivative of change between two grids.
 

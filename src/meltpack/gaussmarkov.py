@@ -30,7 +30,8 @@ def _uncertainty(Ryy, Rxy, Rxx_inv):
 #         eps[i] -= (Rxy[:,i] * Rxy[:,i].T * Rxx_inv).sum()
 #     return eps
 
-def predict(model, Xi, X, Y, eps0=1e-1, maxdist=1e3, compute_uncertainty=False, use_kd_trees=True):
+def predict(model, Xi, X, Y, eps0=1e-1, maxdist=1e3, compute_uncertainty=False,
+        use_kd_trees=True, demean=True):
     """ Return the Gauss-Markov minimum variance estimate for points *Xi* given
     data *Y* observed at *X*.
     (DISEP Eqn 2.397)
@@ -56,7 +57,10 @@ def predict(model, Xi, X, Y, eps0=1e-1, maxdist=1e3, compute_uncertainty=False, 
     """
     # Matrix inversion and multiplication are somewhat slow
     # Error variance is extremely slow with the current algorithm
-    Ym = Y.mean()
+    if demean:
+        Ym = Y.mean()
+    else:
+        Ym = 0.0
     Yd = Y-Ym
     
     if use_kd_trees:
