@@ -4,6 +4,7 @@ from concurrent.futures import (ThreadPoolExecutor, as_completed, wait,
 from multiprocessing import cpu_count
 import numpy as np
 from scipy import signal
+from karta import Point
 
 from . import utilities
 
@@ -45,19 +46,26 @@ def correlate_chips(search_chip, ref_chip, mode="valid"):
     i, j = findpeak(c)
     return findoffset(search_chip.shape, (i, j)), c[i,j]
 
-def _do_correlation(searchimage, refimage, refcenter, dx, dy):
+def _do_correlation(searchimage, refimage, refcenter, ox, oy, dx, dy):
+    """
+    searchimage and refimage are numpy arrays
+    refcenter is a tuple indicating the physical center of refimage
+    ox and oy are offsets applied to the search image in physical units, which are added to the final displacements
+    dx and dy are floating point grid spacings
+    """
     (x, y), strength = correlate_chips(searchimage, refimage, mode="same")
-    x_displ = x*dx
-    y_displ = y*dy
+    x_displ = x*dx+ox
+    y_displ = y*dy+oy
     return refcenter, (x_displ, y_displ), strength
 
-def correlate_scenes(scene1, scene2, searchsize=(256, 256), refsize=(32, 32),
-        resolution=(128, 128), nprocs=None):
+def correlate_scenes(scene1, scene2, uguess, vguess, dt, searchsize=(128, 128),
+        refsize=(32, 32), resolution=(128, 128), nprocs=None):
 
     bboxc = utilities.overlap_bbox(scene1.data_bbox, scene2.data_bbox)
     scene1c = scene1.clip(bboxc[0], bboxc[2], bboxc[1], bboxc[3])
     scene2c = scene2.clip(bboxc[0], bboxc[2], bboxc[1], bboxc[3])
     dx, dy = scene2c.transform[2:4]
+    ny, nx = scene2c.size
 
     points = []
     displs = []
@@ -66,37 +74,82 @@ def correlate_scenes(scene1, scene2, searchsize=(256, 256), refsize=(32, 32),
     if nprocs is None:
         nprocs = cpu_count()
 
-    overlap = ((searchsize[0]-resolution[0]), (searchsize[1]-resolution[1]))
-    dx, dy = scene1c.transform[2:4]
-    pad = ((searchsize[0]-refsize[0])//2, (searchsize[1]-refsize[1])//2)
+    #overlap = ((searchsize[0]-resolution[0]), (searchsize[1]-resolution[1]))
+    #pad = ((searchsize[0]-refsize[0])//2, (searchsize[1]-refsize[1])//2)
+    vel_bbox = uguess.bbox
+    hx = searchsize[0]//2
+    hy = searchsize[1]//2
 
     with ThreadPoolExecutor(nprocs) as executor:
 
         futures = []
-        for refchunkbig, searchchunk in zip(scene1c.aschunks(searchsize, overlap, copy=False),
-                                            scene2c.aschunks(searchsize, overlap, copy=False)):
+        for refchunk in scene1c.aschunks(refsize, (resolution[0]-refsize[0], resolution[1]-refsize[1]), copy=False):
 
-            if searchchunk.size == (searchsize):
+            if len(futures) == 5000:
+                for fut in as_completed(futures):
+                    ref_center, displ, strength = fut.result()
 
-                if len(futures) == 2000:
-                    for fut in as_completed(futures):
-                        ref_center, displ, strength = fut.result()
+                    points.append(ref_center)
+                    displs.append(displ)
+                    strengths.append(strength)
+                futures = []
 
-                        points.append(ref_center)
-                        displs.append(displ)
-                        strengths.append(strength)
-                    futures = []
+            min_valid = refsize[0]*refsize[1]
+            if (refchunk.size == refsize) and not (np.any(np.isnan(refchunk.values))):
+                refimage = refchunk.values
+                bbox = refchunk.bbox
+                xrefcenter = 0.5*(bbox[0]+bbox[2])
+                yrefcenter = 0.5*(bbox[1]+bbox[3])
 
-                searchimage = searchchunk.values
-                refimage = refchunkbig.values[pad[0]:pad[0]+refsize[0], pad[1]:pad[1]+refsize[1]]
+                if ((xrefcenter > vel_bbox[0]+hx) and (xrefcenter < vel_bbox[2]-hx) and
+                    (yrefcenter > vel_bbox[1]+hy) and (yrefcenter < vel_bbox[3]-hy)):
 
-                bbox = refchunkbig.bbox
-                refcenter = (bbox[0]+dx*(pad[0]+0.5*refsize[0]),
-                             bbox[1]+dy*(pad[1]+0.5*refsize[1]))
+                    # Choose a search chunk based on velocity guess
+                    refcenter = (xrefcenter, yrefcenter)
+                    refcenter_pt = Point(refcenter, crs=refchunk.crs)
+                    u = uguess.sample(refcenter_pt)[0]
+                    v = vguess.sample(refcenter_pt)[0]
+                    xdispl_expected = u*dt
+                    ydispl_expected = v*dt
+                    try:
+                        i, j = scene2c.get_indices(xrefcenter+xdispl_expected,
+                                                   yrefcenter+ydispl_expected)
+                    except ValueError:
+                        continue
+                    searchimage = scene2c.values[max(0, i-hy):min(ny-1, i+hy),
+                                                 max(0, j-hx):min(nx-1, j+hx)]
 
-                fut = executor.submit(_do_correlation, searchimage, refimage,
-                                      refcenter, dx, dy)
-                futures.append(fut)
+                    # Submit job
+                    if not np.any(np.isnan(searchimage)):
+                        fut = executor.submit(_do_correlation, searchimage, refimage,
+                                              refcenter, xdispl_expected, ydispl_expected,
+                                              dx, dy)
+                        futures.append(fut)
+
+        # for refchunkbig, searchchunk in zip(scene1c.aschunks(searchsize, overlap, copy=False),
+        #                                     scene2c.aschunks(searchsize, overlap, copy=False)):
+
+        #     if searchchunk.size == (searchsize):
+
+        #         if len(futures) == 2000:
+        #             for fut in as_completed(futures):
+        #                 ref_center, displ, strength = fut.result()
+
+        #                 points.append(ref_center)
+        #                 displs.append(displ)
+        #                 strengths.append(strength)
+        #             futures = []
+
+        #         searchimage = searchchunk.values
+        #         refimage = refchunkbig.values[pad[0]:pad[0]+refsize[0], pad[1]:pad[1]+refsize[1]]
+
+        #         bbox = refchunkbig.bbox
+        #         refcenter = (bbox[0]+dx*(pad[0]+0.5*refsize[0]),
+        #                      bbox[1]+dy*(pad[1]+0.5*refsize[1]))
+
+        #         fut = executor.submit(_do_correlation, searchimage, refimage,
+        #                               refcenter, dx, dy)
+        #         futures.append(fut)
 
         for fut in as_completed(futures):
             ref_center, displ, strength = fut.result()
