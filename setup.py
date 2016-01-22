@@ -9,7 +9,7 @@ extensions = [Extension("meltpack._divergence", ["src/meltpack/_divergence.pyx"]
 
 setup(
         name="meltpack",
-        version="0.1a2",
+        version="0.1b1",
         description="Tools for estimating ice shelf melt rates",
         author="Nat Wilson",
         packages=find_packages("src"),
