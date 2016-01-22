@@ -59,7 +59,7 @@ def _do_correlation(searchimage, refimage, refcenter, ox, oy, dx, dy):
     return refcenter, (x_displ, y_displ), strength
 
 def correlate_scenes(scene1, scene2, uguess, vguess, dt, searchsize=(128, 128),
-        refsize=(32, 32), resolution=(128, 128), nprocs=None):
+        refsize=(32, 32), resolution=(50.0, 50.0), nprocs=None):
 
     bboxc = utilities.overlap_bbox(scene1.data_bbox, scene2.data_bbox)
     scene1c = scene1.clip(bboxc[0], bboxc[2], bboxc[1], bboxc[3])
@@ -74,16 +74,53 @@ def correlate_scenes(scene1, scene2, uguess, vguess, dt, searchsize=(128, 128),
     if nprocs is None:
         nprocs = cpu_count()
 
-    #overlap = ((searchsize[0]-resolution[0]), (searchsize[1]-resolution[1]))
-    #pad = ((searchsize[0]-refsize[0])//2, (searchsize[1]-refsize[1])//2)
     vel_bbox = uguess.bbox
-    hx = searchsize[0]//2
-    hy = searchsize[1]//2
+    rhx = refsize[0]//2
+    rhy = refsize[1]//2
+    shx = searchsize[0]//2
+    shy = searchsize[1]//2
+
+
+    # compute reference chip centers
+    xmin, xmax, ymin, ymax = scene1c.extent
+    x = np.arange(xmin, xmax, resolution[0])
+    y = np.arange(ymin, ymax, resolution[1])
+    Xref, Yref = np.meshgrid(x, y)
+    Xref = Xref.ravel()
+    Yref = Yref.ravel()
+
+    # filter out nan locations
+    v1 = scene1c.sample(Xref, Yref)
+    v2 = scene2c.sample(Xref, Yref)
+    mask = np.isnan(v1) | np.isnan(v2)
+    Xref = Xref[~mask]
+    Yref = Yref[~mask]
+
+    # filter out locations beyond the velocity grid
+    xmin, xmax, ymin, ymax = uguess.extent
+    mask = (Xref<xmin) | (Xref>xmax) | (Yref<ymin) | (Yref>ymax)
+    Xref = Xref[~mask]
+    Yref = Yref[~mask]
+
+    # get indices for ref centers
+    Iref, Jref = scene1c.get_indices(Xref, Yref)
+
+    # compute velocity guesses
+    uref = uguess.sample(Xref, Yref)
+    vref = vguess.sample(Xref, Yref)
+
+    # compute expected offsets
+    offx = np.round(uref*dt/dx).astype(np.int16)
+    offy = np.round(vref*dt/dy).astype(np.int16)
+
+    # extract chips and farm out to threadpool
+    refchiplength = refsize[0]*refsize[1]
+    searchchiplength = searchsize[0]*searchsize[1]
 
     with ThreadPoolExecutor(nprocs) as executor:
 
         futures = []
-        for refchunk in scene1c.aschunks(refsize, (resolution[0]-refsize[0], resolution[1]-refsize[1]), copy=False):
+        for xrefcenter, yrefcenter, ir, jr, ox, oy in zip(Xref, Yref, Iref, Jref, offx, offy):
 
             if len(futures) == 5000:
                 for fut in as_completed(futures):
@@ -94,62 +131,17 @@ def correlate_scenes(scene1, scene2, uguess, vguess, dt, searchsize=(128, 128),
                     strengths.append(strength)
                 futures = []
 
-            min_valid = refsize[0]*refsize[1]
-            if (refchunk.size == refsize) and not (np.any(np.isnan(refchunk.values))):
-                refimage = refchunk.values
-                bbox = refchunk.bbox
-                xrefcenter = 0.5*(bbox[0]+bbox[2])
-                yrefcenter = 0.5*(bbox[1]+bbox[3])
+            refchip = scene1c.values[max(0, ir-rhy):min(ny-1, ir+rhy),
+                                     max(0, jr-rhx):min(nx-1, jr+rhx)]
+            searchchip = scene2c.values[max(0, ir+oy-shy):min(ny-1, ir+oy+shy),
+                                        max(0, jr+ox-shx):min(nx-1, jr+ox+shx)]
 
-                if ((xrefcenter > vel_bbox[0]+hx) and (xrefcenter < vel_bbox[2]-hx) and
-                    (yrefcenter > vel_bbox[1]+hy) and (yrefcenter < vel_bbox[3]-hy)):
+            if ((searchchip.shape == searchsize) and (refchip.shape == refsize) and
+                (not np.any(np.isnan(searchchip))) and (not np.any(np.isnan(refchip)))):
 
-                    # Choose a search chunk based on velocity guess
-                    refcenter = (xrefcenter, yrefcenter)
-                    refcenter_pt = Point(refcenter, crs=refchunk.crs)
-                    u = uguess.sample(refcenter_pt)[0]
-                    v = vguess.sample(refcenter_pt)[0]
-                    xdispl_expected = u*dt
-                    ydispl_expected = v*dt
-                    try:
-                        i, j = scene2c.get_indices(xrefcenter+xdispl_expected,
-                                                   yrefcenter+ydispl_expected)
-                    except ValueError:
-                        continue
-                    searchimage = scene2c.values[max(0, i-hy):min(ny-1, i+hy),
-                                                 max(0, j-hx):min(nx-1, j+hx)]
-
-                    # Submit job
-                    if not np.any(np.isnan(searchimage)):
-                        fut = executor.submit(_do_correlation, searchimage, refimage,
-                                              refcenter, xdispl_expected, ydispl_expected,
-                                              dx, dy)
-                        futures.append(fut)
-
-        # for refchunkbig, searchchunk in zip(scene1c.aschunks(searchsize, overlap, copy=False),
-        #                                     scene2c.aschunks(searchsize, overlap, copy=False)):
-
-        #     if searchchunk.size == (searchsize):
-
-        #         if len(futures) == 2000:
-        #             for fut in as_completed(futures):
-        #                 ref_center, displ, strength = fut.result()
-
-        #                 points.append(ref_center)
-        #                 displs.append(displ)
-        #                 strengths.append(strength)
-        #             futures = []
-
-        #         searchimage = searchchunk.values
-        #         refimage = refchunkbig.values[pad[0]:pad[0]+refsize[0], pad[1]:pad[1]+refsize[1]]
-
-        #         bbox = refchunkbig.bbox
-        #         refcenter = (bbox[0]+dx*(pad[0]+0.5*refsize[0]),
-        #                      bbox[1]+dy*(pad[1]+0.5*refsize[1]))
-
-        #         fut = executor.submit(_do_correlation, searchimage, refimage,
-        #                               refcenter, dx, dy)
-        #         futures.append(fut)
+                fut = executor.submit(_do_correlation, searchchip, refchip,
+                                      (xrefcenter, yrefcenter), ox, oy, dx, dy)
+                futures.append(fut)
 
         for fut in as_completed(futures):
             ref_center, displ, strength = fut.result()
