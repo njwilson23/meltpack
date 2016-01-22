@@ -82,7 +82,12 @@ def correlate_scenes(scene1, scene2, uguess, vguess, dt, searchsize=(128, 128),
 
 
     # compute reference chip centers
-    xmin, xmax, ymin, ymax = scene1c.extent
+    xmin1, xmax1, ymin1, ymax1 = scene1c.extent
+    xmin2, xmax2, ymin2, ymax2 = scene2c.extent
+    xmin = max(xmin1, xmin2) + dx
+    xmax = min(xmax1, xmax2) - dx
+    ymin = max(ymin1, ymin2) + dy
+    ymax = min(ymax1, ymax2) - dy
     x = np.arange(xmin, xmax, resolution[0])
     y = np.arange(ymin, ymax, resolution[1])
     Xref, Yref = np.meshgrid(x, y)
@@ -114,9 +119,6 @@ def correlate_scenes(scene1, scene2, uguess, vguess, dt, searchsize=(128, 128),
     offy = np.round(vref*dt/dy).astype(np.int16)
 
     # extract chips and farm out to threadpool
-    refchiplength = refsize[0]*refsize[1]
-    searchchiplength = searchsize[0]*searchsize[1]
-
     with ThreadPoolExecutor(nprocs) as executor:
 
         futures = []
@@ -140,7 +142,7 @@ def correlate_scenes(scene1, scene2, uguess, vguess, dt, searchsize=(128, 128),
                 (not np.any(np.isnan(searchchip))) and (not np.any(np.isnan(refchip)))):
 
                 fut = executor.submit(_do_correlation, searchchip, refchip,
-                                      (xrefcenter, yrefcenter), ox, oy, dx, dy)
+                                      (xrefcenter, yrefcenter), ox*dx, oy*dy, dx, dy)
                 futures.append(fut)
 
         for fut in as_completed(futures):
