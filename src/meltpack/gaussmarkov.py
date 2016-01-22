@@ -132,3 +132,36 @@ def data_variogram(X, Y, n=500, maxdist=1e3):
     d = kd.sparse_distance_matrix(kd, maxdist)
     return np.asarray(d.todense()).ravel(), np.abs(G.ravel())
 
+def fill_holes(grid, mask=None, eps0=1e-1, maxdist=1e3, use_kd_trees=True):
+    """ Use GM to fill holes in a grid """
+
+    interp_mask = np.isnan(grid.values)
+    data_mask = ~interp_mask
+    if mask is not None:
+        tmp = grid.copy()
+        tmp.values[:,:] = 1.0
+        tmp.mask_by_poly(mask, inplace=True)
+        interp_mask[np.isnan(tmp.values)] = False
+        del tmp
+
+    x, y = grid.coordmesh()
+    xi = x[interp_mask]
+    yi = y[interp_mask]
+    xo = x[data_mask]
+    yo = y[data_mask]
+    del x, y
+
+    print(len(xo))
+    print(len(xi))
+
+    def model(x):
+        return 10*np.exp(-x**2/200**2)
+
+    zi, _ = predict(model, np.c_[xi, yi], np.c_[xo, yo], grid.values[data_mask],
+                    eps0=eps0, maxdist=maxdist, use_kd_trees=use_kd_trees,
+                    compute_uncertainty=False)
+
+    newgrid = grid.copy()
+    newgrid.values[interp_mask] = zi
+    return newgrid
+
