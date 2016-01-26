@@ -37,7 +37,7 @@ def _comparison_matrix(n):
     C[I,J1] = -1.0
     return c, C
 
-def compute_vertical_corrections(grid_fnms, min_pixel_overlap=100,
+def compute_vertical_corrections(grids, min_pixel_overlap=100,
     weighting_func=None, polymasks=()):
     """ Perform pairwaise comparisons of a list of DEMs and return a dictionary
     of {filename -> vertical correction} that minimizes the misfit between
@@ -45,19 +45,28 @@ def compute_vertical_corrections(grid_fnms, min_pixel_overlap=100,
 
     By default, weights are uniform.
     """
+    if isinstance(grids[0], str):
+        gridnames = True
+    else:
+        gridnames = False
+
     if weighting_func is None:
         weighting_func = lambda a,b: 1.0
 
-    c, C = _comparison_matrix(len(grid_fnms))
+    c, C = _comparison_matrix(len(grids))
 
     # Piecewise comparison (computes the matrix-vector product CD)
     CD = []
     #S = []
     for i, j in c:
-        dem0 = karta.read_gtiff(grid_fnms[i])
-        dem1 = karta.read_gtiff(grid_fnms[j])
-        dem0.values[dem0.values<-1000000] = np.nan
-        dem1.values[dem1.values<-1000000] = np.nan
+        if gridnames:
+            dem0 = karta.read_gtiff(grids[i])
+            dem1 = karta.read_gtiff(grids[j])
+            dem0.values[dem0.values<-1000000] = np.nan
+            dem1.values[dem1.values<-1000000] = np.nan
+        else:
+            dem0 = grids[i]
+            dem1 = grids[j]
 
         # If bedrock regions are provided, limit the overlapping pixel counts
         # the regions inside the bedrock masking polygons.
@@ -96,15 +105,15 @@ def compute_vertical_corrections(grid_fnms, min_pixel_overlap=100,
     Ca = C[~np.isnan(CD),:]             # Drop non-ovelapping relations
     CaD = np.array(CD)[~np.isnan(CD)]
 
-    corrected_grids = [fnm for tf, fnm in zip(~np.all(Ca==0, axis=0), grid_fnms) if tf]
+    corrected_grids = [grid for tf, grid in zip(~np.all(Ca==0, axis=0), grids) if tf]
     Ca = Ca[:,~np.all(Ca==0, axis=0)]   # Drop DEMs not involved in remaining relations
 
     # Compute weights
     Wdiag = np.zeros(len(Ca))
     for i,row in enumerate(Ca):
-        fnm1 = corrected_grids[np.argmin(row)]
-        fnm2 = corrected_grids[np.argmax(row)]
-        Wdiag[i] = weighting_func(fnm1, fnm2)
+        grid1 = corrected_grids[np.argmin(row)]
+        grid2 = corrected_grids[np.argmax(row)]
+        Wdiag[i] = weighting_func(grid1, grid2)
 
     W = np.diag(Wdiag)
     Winv = np.linalg.inv(W)
@@ -123,7 +132,7 @@ def compute_vertical_corrections(grid_fnms, min_pixel_overlap=100,
 
     # A^TA may be singular, so solve system with the pseudoinverse
     dz = np.dot(np.linalg.pinv(A), RHS)[:-1]
-    return {fnm: _dz for fnm, _dz in zip(corrected_grids, dz)}
+    return {grid: _dz for grid, _dz in zip(corrected_grids, dz)}
 
 def compute_horizontal_corrections(grid_fnms, min_pixel_overlap=100,
     weighting_func=None, polymasks=()):
