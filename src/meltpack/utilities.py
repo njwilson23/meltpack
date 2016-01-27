@@ -105,6 +105,9 @@ def count_shared_pixels(scene1, scene2, bbox1=None, bbox2=None, nodata=None):
     except ValueError:
         return 0
 
+    if (bbox[2]-bbox[0] <= 0) or (bbox[3]-bbox[1] <= 0):
+        return 0
+
     # Calculate the bounds of data pixels for each image
     idx_bounds1 = (scene1.get_indices(bbox[0], bbox[1]),
                    scene1.get_indices(bbox[2], bbox[3]))
@@ -121,7 +124,7 @@ def count_shared_pixels(scene1, scene2, bbox1=None, bbox2=None, nodata=None):
     if (nx == 0) or (ny == 0):
         return 0
 
-    bandwidth = 1000000 // nx      # assuming 4-byte numbers and 400 mb memory use (conservative)
+    bandwidth = 2000000 // nx      # assuming 4-byte numbers and 800 mb memory use (conservative)
     pixel_count = 0
     i = 0
     while i != ny:
