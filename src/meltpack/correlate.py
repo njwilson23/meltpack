@@ -2,6 +2,7 @@ from __future__ import division
 from concurrent.futures import (ThreadPoolExecutor, as_completed, wait,
                                 FIRST_COMPLETED, ALL_COMPLETED)
 from multiprocessing import cpu_count
+from math import log
 import numpy as np
 from scipy import signal
 from karta import Point
@@ -27,6 +28,17 @@ def findpeak(c):
     j = idx-i*size[1]
     return i, j
 
+def findpeak_subpixel(c, size):
+    """ Version of findpeak with subpixel accuracy, using two 1D gaussians """
+    idx = np.argmax(c)
+    i = idx//size[1]
+    j = idx-i*size[1]
+    
+    cij = log(c[i,j])
+    dx = (log(c[i,j-1]) - log(c[i,j+1])) / (2*log(c[i,j+1]) - 4*cij + 2*log(c[i,j-1]))
+    dy = (log(c[i-1,j]) - log(c[i+1,j])) / (2*log(c[i+1,j]) - 4*cij + 2*log(c[i-1,j]))
+    return i+dy, j+dx
+
 def findoffset(size, peak):
     """ Given an array size and peak indices, return the offset from the array
     center """
@@ -43,7 +55,7 @@ def correlate_chips(search_chip, ref_chip, mode="valid"):
     tracking.
     """
     c = _autocorrelate(_normalize_chip(search_chip), _normalize_chip(ref_chip), mode=mode)
-    i, j = findpeak(c)
+    i, j = findpeak_subpixel(c)
     return findoffset(search_chip.shape, (i, j)), c[i,j]
 
 def _do_correlation(searchimage, refimage, refcenter, ox, oy, dx, dy):
