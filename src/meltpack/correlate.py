@@ -29,7 +29,11 @@ def findpeak(c):
     return i, j
 
 def findpeak_subpixel(c, size):
-    """ Version of findpeak with subpixel accuracy, using two 1D gaussians """
+    """ Version of findpeak with subpixel accuracy, using two 1D gaussians
+
+    Based on formulae in Debella-Gilo and Kaab (2011), "Sub-pixel precision
+    image matching for measuring surface displacements on mass movements using
+    normalized cross-correlation." """
     idx = np.argmax(c)
     i = idx//size[1]
     j = idx-i*size[1]

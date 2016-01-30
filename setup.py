@@ -5,6 +5,8 @@ import numpy
 extensions = [Extension("meltpack._divergence", ["src/meltpack/_divergence.pyx"],
                         include_dirs=[numpy.get_include()]),
               Extension("meltpack._smooth", ["src/meltpack/_smooth.pyx"],
+                        include_dirs=[numpy.get_include()]),
+              Extension("meltpack._medianfilt", ["src/meltpack/_medianfilt.pyx"],
                         include_dirs=[numpy.get_include()])]
 
 setup(
