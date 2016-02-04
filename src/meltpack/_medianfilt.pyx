@@ -9,6 +9,7 @@ ctypedef np.float64_t DTYPE_t
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def medianfilt(np.ndarray[DTYPE_t, ndim=2] img):
+    """ Perform a nodata-aware median filtering operation on a numpy grid. """
 
     cdef int nx, ny
     cdef int i, j
