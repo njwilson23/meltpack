@@ -14,7 +14,7 @@ def _normalize_chip(chip):
     if s == 0.0:
         return np.zeros_like(chip)
     else:
-        return (chip-chip.mean())/chip.std()
+        return (chip-chip.mean())/s
 
 def _autocorrelate(search_chip, ref_chip, mode="valid"):
     return signal.fftconvolve(search_chip, ref_chip[::-1,::-1], mode=mode)
