@@ -28,20 +28,32 @@ def findpeak(c):
     j = idx-i*size[1]
     return i, j
 
-def findpeak_subpixel(c, size):
+def findpeak_subpixel(c):
     """ Version of findpeak with subpixel accuracy, using two 1D gaussians
 
     Based on formulae in Debella-Gilo and Kaab (2011), "Sub-pixel precision
     image matching for measuring surface displacements on mass movements using
     normalized cross-correlation." """
+    size = c.shape
     idx = np.argmax(c)
     i = idx//size[1]
     j = idx-i*size[1]
-    
-    cij = log(c[i,j])
-    dx = (log(c[i,j-1]) - log(c[i,j+1])) / (2*log(c[i,j+1]) - 4*cij + 2*log(c[i,j-1]))
-    dy = (log(c[i-1,j]) - log(c[i+1,j])) / (2*log(c[i+1,j]) - 4*cij + 2*log(c[i-1,j]))
-    return i+dy, j+dx
+    if (i == 0) or (i == size[0]-1) or (j == 0) or (j == size[1]-1):
+        return i, j
+    else:
+        cmin = c.min()
+        cij = log(c[i,j]-cmin+1e-8)
+        try:
+            dx = (log(c[i,j-1]-cmin+1e-8) - log(c[i,j+1]-cmin+1e-8)) / \
+                    (2*log(c[i,j+1]-cmin+1e-8) - 4*cij + 2*log(c[i,j-1]-cmin+1e-8))
+        except ZeroDivisionError:
+            dx = 0.0
+        try:
+            dy = (log(c[i-1,j]-cmin+1e-8) - log(c[i+1,j]-cmin+1e-8)) / \
+                    (2*log(c[i+1,j]-cmin+1e-8) - 4*cij + 2*log(c[i-1,j]-cmin+1e-8))
+        except ZeroDivisionError:
+            dy = 0.0
+        return i+dy, j+dx
 
 def findoffset(size, peak):
     """ Given an array size and peak indices, return the offset from the array
@@ -95,7 +107,6 @@ def correlate_scenes(scene1, scene2, uguess, vguess, dt, searchsize=(128, 128),
     rhy = refsize[1]//2
     shx = searchsize[0]//2
     shy = searchsize[1]//2
-
 
     # compute reference chip centers
     xmin1, xmax1, ymin1, ymax1 = scene1c.extent
