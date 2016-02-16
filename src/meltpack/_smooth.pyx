@@ -58,5 +58,9 @@ cdef _smooth5(np.ndarray[DTYPE_t, ndim=2] img):
             else:
                 out[i,j] = runsum/count
 
+    out[0,:] = np.nan
+    out[ny-1,:] = np.nan
+    out[:,0] = np.nan
+    out[:,nx-1] = np.nan
     return out
 

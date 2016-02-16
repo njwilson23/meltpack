@@ -63,5 +63,9 @@ def medianfilt(np.ndarray[DTYPE_t, ndim=2] img):
             else:
                 out[i,j] = np.median(arr[:count])
 
+    out[0,:] = img[0,:]
+    out[ny-1,:] = img[ny-1,:]
+    out[:,0] = img[:,0]
+    out[:,nx-1] = img[:,nx-1]
     return out
 
