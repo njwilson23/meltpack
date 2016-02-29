@@ -1,11 +1,10 @@
 from __future__ import division
-from concurrent.futures import (ThreadPoolExecutor, as_completed, wait,
+from concurrent.futures import (ThreadPoolExecutor, as_completed,
                                 FIRST_COMPLETED, ALL_COMPLETED)
 from multiprocessing import cpu_count
 from math import log
 import numpy as np
 from scipy import signal
-from karta import Point
 
 from . import utilities
 
@@ -69,6 +68,8 @@ def correlate_chips(search_chip, ref_chip, mode="valid"):
 
     Set `mode="same"` for image co-registration. Use `mode="valid"` for feature
     tracking.
+
+    Returns pixel offsets (tuple) and correlation strength (float).
     """
     c = _autocorrelate(_normalize_chip(search_chip), _normalize_chip(ref_chip), mode=mode)
     i, j = findpeak_subpixel(c)
@@ -88,11 +89,39 @@ def _do_correlation(searchimage, refimage, refcenter, ox, oy, dx, dy):
 
 def correlate_scenes(scene1, scene2, uguess, vguess, dt, searchsize=(128, 128),
         refsize=(32, 32), resolution=(50.0, 50.0), nprocs=None):
+    """ Compute apparent offsets between two scenes at grid points.
+
+    scene1 : karta.RegularGrid, earlier scene with features to match
+
+    scene2 : karta.RegularGrid, later scene with features to match
+
+    uguess : karta.RegularGrid, grid of expected horizontal displacement rate
+
+    vguess : karta.RegularGrid, grid of expected vertical displacement rate
+
+    dt : float, time offset between scenes
+
+    searchsize : tuple(int, int), size of extracted search region. A larger
+        search region permits greater deviation from the absolute velocity
+        guess, but becomes less robust to deformation gradients.
+        (default (128, 128))
+
+    refsize : tuple(int, int), size of reference region to match within search
+        region. Typically, refsize should be at least 1/4 the size of
+        searchsize.
+        (default (32, 32))
+
+    resolution : tuple(float, float), resolution of sampling grid in projected
+        units.
+
+    nprocs : number of worker threads to launch
+
+    """
 
     bboxc = utilities.overlap_bbox(scene1.data_bbox, scene2.data_bbox)
     scene1c = scene1.clip(bboxc[0], bboxc[2], bboxc[1], bboxc[3])
     scene2c = scene2.clip(bboxc[0], bboxc[2], bboxc[1], bboxc[3])
-    dx, dy = scene2c.transform[2:4]
+    dx, dy = scene2c.resolution
     ny, nx = scene2c.size
 
     points = []
@@ -102,7 +131,6 @@ def correlate_scenes(scene1, scene2, uguess, vguess, dt, searchsize=(128, 128),
     if nprocs is None:
         nprocs = cpu_count()
 
-    vel_bbox = uguess.bbox
     rhx = refsize[0]//2
     rhy = refsize[1]//2
     shx = searchsize[0]//2
@@ -151,14 +179,14 @@ def correlate_scenes(scene1, scene2, uguess, vguess, dt, searchsize=(128, 128),
         futures = []
         for xrefcenter, yrefcenter, ir, jr, ox, oy in zip(Xref, Yref, Iref, Jref, offx, offy):
 
-            if len(futures) == 5000:
-                for fut in as_completed(futures):
-                    ref_center, displ, strength = fut.result()
+            #if len(futures) == 5000:
+            #    for fut in as_completed(futures):
+            #        ref_center, displ, strength = fut.result()
 
-                    points.append(ref_center)
-                    displs.append(displ)
-                    strengths.append(strength)
-                futures = []
+            #        points.append(ref_center)
+            #        displs.append(displ)
+            #        strengths.append(strength)
+            #    futures = []
 
             refchip = scene1c.values[max(0, ir-rhy):min(ny-1, ir+rhy),
                                      max(0, jr-rhx):min(nx-1, jr+rhx)]
