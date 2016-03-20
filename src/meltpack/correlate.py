@@ -1,6 +1,5 @@
 from __future__ import division
-from concurrent.futures import (ThreadPoolExecutor, as_completed,
-                                FIRST_COMPLETED, ALL_COMPLETED)
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from multiprocessing import cpu_count
 from math import log
 import numpy as np
