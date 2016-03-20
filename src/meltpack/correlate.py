@@ -87,6 +87,8 @@ def _do_correlation(searchimage, refimage, refcenter, ox, oy, dx, dy):
     ox and oy are offsets applied to the search image in physical units, which are added to the final displacements
     dx and dy are floating point grid spacings
     """
+    if np.any(np.isnan(searchimage)) or np.any(np.isnan(refimage)):
+        return refcenter, (np.nan, np.nan), np.nan
     (x, y), strength = correlate_chips(searchimage, refimage, mode="same")
     x_displ = x*dx + ox
     y_displ = y*dy + oy
@@ -193,9 +195,7 @@ def correlate_scenes(scene1, scene2, uguess, vguess, dt, searchsize=(128, 128),
             searchchip = scene2c.values[max(0, ir+oy-shy):min(ny-1, ir+oy+shy),
                                         max(0, jr+ox-shx):min(nx-1, jr+ox+shx)]
 
-            if ((searchchip.shape == searchsize) and (refchip.shape == refsize) and
-                (not np.any(np.isnan(searchchip))) and (not np.any(np.isnan(refchip)))):
-
+            if (searchchip.shape == searchsize) and (refchip.shape == refsize):
                 fut = executor.submit(_do_correlation, searchchip, refchip,
                                       (xr, yr), ox*dx, oy*dy, dx, dy)
                 futures.append(fut)
@@ -308,9 +308,7 @@ def correlate_scenes_at_points(scene1, scene2, uguess, vguess, dt, corrpoints,
             refchips.append(refchip)
             searchchips.append(searchchip)
 
-            if ((searchchip.shape == searchsize) and (refchip.shape == refsize) and
-                (not np.any(np.isnan(searchchip))) and (not np.any(np.isnan(refchip)))):
-
+            if (searchchip.shape == searchsize) and (refchip.shape == refsize):
                 fut = executor.submit(_do_correlation, searchchip, refchip,
                                       (xr, yr), ox*dx, oy*dy, dx, dy)
                 futures.append(fut)
