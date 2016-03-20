@@ -184,18 +184,29 @@ def correlate_scenes(scene1, scene2, uguess, vguess, dt, searchsize=(128, 128),
     offx = np.round(uref*dt/dx).astype(np.int16)
     offy = np.round(vref*dt/dy).astype(np.int16)
 
+    # extract chips
+    searchchips = []
+    refchips = []
+    val1 = scene1c.values
+    val2 = scene2c.values
+
+    for ir, jr, ox, oy in zip(Iref, Jref, offx, offy):
+
+        refchip = val1[max(0, ir-rhy):min(ny-1, ir+rhy),
+                       max(0, jr-rhx):min(nx-1, jr+rhx)]
+        searchchip = val2[max(0, ir+oy-shy):min(ny-1, ir+oy+shy),
+                          max(0, jr+ox-shx):min(nx-1, jr+ox+shx)]
+        refchips.append(refchip)
+        searchchips.append(searchchip)
+
+
     # extract chips and farm out to threadpool
     with ThreadPoolExecutor(nprocs) as executor:
 
         futures = []
-        for xr, yr, ir, jr, ox, oy in zip(Xref, Yref, Iref, Jref, offx, offy):
+        for xr, yr, schip, rchip, ox, oy in zip(Xref, Yref, searchchips, refchips, offx, offy):
 
-            refchip = scene1c.values[max(0, ir-rhy):min(ny-1, ir+rhy),
-                                     max(0, jr-rhx):min(nx-1, jr+rhx)]
-            searchchip = scene2c.values[max(0, ir+oy-shy):min(ny-1, ir+oy+shy),
-                                        max(0, jr+ox-shx):min(nx-1, jr+ox+shx)]
-
-            if (searchchip.shape == searchsize) and (refchip.shape == refsize):
+            if (schip.shape == searchsize) and (rchip.shape == refsize):
                 fut = executor.submit(_do_correlation, searchchip, refchip,
                                       (xr, yr), ox*dx, oy*dy, dx, dy)
                 futures.append(fut)
