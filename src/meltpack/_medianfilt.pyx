@@ -8,7 +8,7 @@ ctypedef np.float64_t DTYPE_t
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def medianfilt(np.ndarray[DTYPE_t, ndim=2] img):
+def medianfilt(DTYPE_t[:,:] img):
     """ Perform a nodata-aware median filtering operation on a numpy grid. """
 
     cdef int nx, ny
@@ -20,9 +20,10 @@ def medianfilt(np.ndarray[DTYPE_t, ndim=2] img):
     ny = img.shape[0]
     nx = img.shape[1]
     out = np.zeros([ny, nx], dtype=DTYPE)
+    cdef DTYPE_t [:,:] out_view = out
 
     arr = np.zeros(9, dtype=DTYPE)
-    cdef double[:] buf = arr
+    cdef DTYPE_t [:] buf = arr
 
     for i in range(1, ny-1):
         for j in range(1, nx-1):
@@ -59,13 +60,13 @@ def medianfilt(np.ndarray[DTYPE_t, ndim=2] img):
                     count += 1
 
             if count == 0:
-                out[i,j] = np.nan
+                out_view[i,j] = np.nan
             else:
-                out[i,j] = np.median(arr[:count])
+                out_view[i,j] = np.median(arr[:count])
 
-    out[0,:] = img[0,:]
-    out[ny-1,:] = img[ny-1,:]
-    out[:,0] = img[:,0]
-    out[:,nx-1] = img[:,nx-1]
+    out_view[0,:] = img[0,:]
+    out_view[ny-1,:] = img[ny-1,:]
+    out_view[:,0] = img[:,0]
+    out_view[:,nx-1] = img[:,nx-1]
     return out
 

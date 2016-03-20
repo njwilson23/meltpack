@@ -19,7 +19,7 @@ def smooth5(np.ndarray[DTYPE_t, ndim=2] img, int niter=1):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef _smooth5(np.ndarray[DTYPE_t, ndim=2] img):
+cdef _smooth5(DTYPE_t [:,:] img):
 
     cdef int nx, ny
     cdef int i, j
@@ -30,6 +30,7 @@ cdef _smooth5(np.ndarray[DTYPE_t, ndim=2] img):
     ny = img.shape[0]
     nx = img.shape[1]
     out = np.zeros([ny, nx], dtype=DTYPE)
+    cdef DTYPE_t [:,:] out_view = out
 
     for i in range(1, ny-1):
         for j in range(1, nx-1):
@@ -54,13 +55,13 @@ cdef _smooth5(np.ndarray[DTYPE_t, ndim=2] img):
                     count += 1
 
             if count == 0:
-                out[i,j] = np.nan
+                out_view[i,j] = np.nan
             else:
-                out[i,j] = runsum/count
+                out_view[i,j] = runsum/count
 
-    out[0,:] = np.nan
-    out[ny-1,:] = np.nan
-    out[:,0] = np.nan
-    out[:,nx-1] = np.nan
+    out_view[0,:] = np.nan
+    out_view[ny-1,:] = np.nan
+    out_view[:,0] = np.nan
+    out_view[:,nx-1] = np.nan
     return out
 
