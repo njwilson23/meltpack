@@ -40,10 +40,26 @@ def _comparison_matrix(n):
 def compute_vertical_corrections(grids, min_pixel_overlap=100,
     weighting_func=None, polymasks=()):
     """ Perform pairwaise comparisons of a list of DEMs and return a dictionary
-    of {filename -> vertical correction} that minimizes the misfit between
+    of {index -> vertical correction} that minimizes the misfit between
     overlapping DEMs, subject to weights from *weighting_func(fnm1, fnm2)*.
 
-    By default, weights are uniform.
+    Parameters:
+    -----------
+    grids : list of filenames of RegularGrid-like instances
+        Grids to compute corrections for. Grids must have the same extent and
+        resolution.
+    min_pixel_overlap : int, optional
+        Minimum number of overlapping data pixels for computing grid
+        relationships (default 100)
+    weighting_func : callable
+        Function that takes two of the input grids (either filenames or
+        RegularGrid instances) and returns a weight. (default, uniforma
+        weighting).
+    polymasks : list or tuple of Polygon instances
+        Polygons that define the data region to use for comparisons, for
+        example to restrict grid correction to comparisons between stable
+        bedrock polygons. If empty (default), all data pixels are considered
+        valid for comparison.
     """
     if isinstance(grids[0], str):
         gridnames = True
@@ -95,24 +111,22 @@ def compute_vertical_corrections(grids, min_pixel_overlap=100,
         n = utilities.count_shared_pixels(dem0, dem1)
         if n >= min_pixel_overlap:
             CD.append(np.mean(utilities.difference_shared_pixels(dem0, dem1)))
-            #S.append(np.nanstd(dem0.values-dem1.values))
         else:
             CD.append(np.nan)
-            #S.append(np.nan)
         del dem0, dem1
 
     # Augment C by removing rows where there is no appreciable overlap
     Ca = C[~np.isnan(CD),:]             # Drop non-ovelapping relations
     CaD = np.array(CD)[~np.isnan(CD)]
 
-    corrected_grids = [grid for tf, grid in zip(~np.all(Ca==0, axis=0), grids) if tf]
+    corrected_grids = [i for tf, i in zip(~np.all(Ca==0, axis=0), range(len(grids))) if tf]
     Ca = Ca[:,~np.all(Ca==0, axis=0)]   # Drop DEMs not involved in remaining relations
 
     # Compute weights
     Wdiag = np.zeros(len(Ca))
     for i,row in enumerate(Ca):
-        grid1 = corrected_grids[np.argmin(row)]
-        grid2 = corrected_grids[np.argmax(row)]
+        grid1 = grids[corrected_grids[np.argmin(row)]]
+        grid2 = grids[corrected_grids[np.argmax(row)]]
         Wdiag[i] = weighting_func(grid1, grid2)
 
     W = np.diag(Wdiag)
@@ -132,7 +146,7 @@ def compute_vertical_corrections(grids, min_pixel_overlap=100,
 
     # A^TA may be singular, so solve system with the pseudoinverse
     dz = np.dot(np.linalg.pinv(A), RHS)[:-1]
-    return {grid: _dz for grid, _dz in zip(corrected_grids, dz)}
+    return {i: _dz for i, _dz in zip(corrected_grids, dz)}
 
 def compute_horizontal_corrections(grid_fnms, min_pixel_overlap=100,
     weighting_func=None, polymasks=()):
@@ -140,7 +154,7 @@ def compute_horizontal_corrections(grid_fnms, min_pixel_overlap=100,
     images that share at least *min_pixel_overlap* pixels. """
     if weighting_func is None:
         weighting_func = lambda a,b: 1.0
-    
+
     raise NotImplementedError()
 
     # c, C = _comparison_matrix(len(grid_fnms))
