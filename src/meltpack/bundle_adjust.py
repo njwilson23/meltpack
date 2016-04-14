@@ -20,13 +20,16 @@ Method:
 """
 
 import itertools
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import numpy as np
 import karta
+from karta.raster.band import SimpleBand
 
 from . import correlate
-from . import utilities
 
 def _comparison_matrix(n):
+    """ Returns a list of 2-combinations of *n* items, and a sparse m×n matrix
+    encoding those combinations """
     c = list(itertools.combinations(range(n), 2))
     C = np.zeros([len(c), n])
 
@@ -43,8 +46,8 @@ def compute_vertical_corrections(grids, min_pixel_overlap=100,
     of {index -> vertical correction} that minimizes the misfit between
     overlapping DEMs, subject to weights from *weighting_func(fnm1, fnm2)*.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     grids : list of filenames of RegularGrid-like instances
         Grids to compute corrections for. Grids must have the same extent and
         resolution.
@@ -73,11 +76,10 @@ def compute_vertical_corrections(grids, min_pixel_overlap=100,
 
     # Piecewise comparison (computes the matrix-vector product CD)
     CD = []
-    #S = []
     for i, j in c:
         if gridnames:
-            dem0 = karta.read_gtiff(grids[i])
-            dem1 = karta.read_gtiff(grids[j])
+            dem0 = karta.read_gtiff(grids[i], bandclass=SimpleBand)
+            dem1 = karta.read_gtiff(grids[j], bandclass=SimpleBand)
             dem0.values[dem0.values<-1000000] = np.nan
             dem1.values[dem1.values<-1000000] = np.nan
         else:
@@ -108,12 +110,12 @@ def compute_vertical_corrections(grids, min_pixel_overlap=100,
             dem0.values[mask_count0==0] = dem0.nodata
             dem1.values[mask_count1==0] = dem1.nodata
 
-        n = utilities.count_shared_pixels(dem0, dem1)
-        if n >= min_pixel_overlap:
-            CD.append(np.mean(utilities.difference_shared_pixels(dem0, dem1)))
+        msk = dem0.data_mask & dem1.data_mask
+        if msk.sum() >= min_pixel_overlap:
+            CD.append(np.mean(dem0[msk] - dem1[msk]))
         else:
             CD.append(np.nan)
-        del dem0, dem1
+        del dem0, dem1, msk
 
     # Augment C by removing rows where there is no appreciable overlap
     Ca = C[~np.isnan(CD),:]             # Drop non-ovelapping relations
@@ -144,7 +146,7 @@ def compute_vertical_corrections(grids, min_pixel_overlap=100,
     A = np.r_[np.c_[A, np.zeros(n)], np.ones([1,n+1])]
     RHS = np.r_[RHS, 0.0]
 
-    # A^TA may be singular, so solve system with the pseudoinverse
+    # A^T.A may be singular, so solve system with the pseudoinverse
     dz = np.dot(np.linalg.pinv(A), RHS)[:-1]
     return {i: _dz for i, _dz in zip(corrected_grids, dz)}
 
@@ -191,12 +193,12 @@ def compute_horizontal_corrections(grid_fnms, min_pixel_overlap=100,
     #         dem0.values[mask_count0==0] = dem0.nodata
     #         dem1.values[mask_count0==0] = dem1.nodata
 
-    #     n = utilities.count_shared_pixels(dem0, dem1)
-    #     if n >= min_pixel_overlap:
-    #         CD.append(np.mean(utilities.difference_shared_pixels(dem0, dem1)))
+    #     msk = dem0.data_mask & dem1.data_mask
+    #     if msk.sum() >= min_pixel_overlap:
+    #         CD.append(np.mean(dem0[msk] - dem1[msk]))
     #     else:
     #         CD.append(np.nan)
-    #     del dem0, dem1
+    #     del dem0, dem1, msk
 
     # # Augment C by removing rows where there is no appreciable overlap
     # Ca = C[~np.isnan(CD),:]             # Drop non-ovelapping relations
