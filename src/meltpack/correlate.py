@@ -78,7 +78,8 @@ def correlate_chips(search_chip, ref_chip, mode="valid"):
     cmean = c.mean()
     if cstd == 0.0:
         cstd = 1e9
-    return findoffset(search_chip.shape, (i, j)), (c[i,j]-cmean)/cstd
+    return findoffset(search_chip.shape, (i, j)), \
+           (c[int(round(i)),int(round(j))]-cmean)/cstd
 
 def _do_correlation(searchimage, refimage, refcenter, ox, oy, dx, dy):
     """
@@ -246,9 +247,6 @@ def correlate_scenes_at_points(scene1, scene2, uguess, vguess, dt, corrpoints,
         searchsize.
         (default (32, 32))
 
-    resolution : tuple(float, float), resolution of sampling grid in projected
-        units.
-
     nprocs : number of worker threads to launch
     """
     bboxc = utilities.overlap_bbox(scene1.data_bbox, scene2.data_bbox)
@@ -336,4 +334,4 @@ def correlate_scenes_at_points(scene1, scene2, uguess, vguess, dt, corrpoints,
             displs.append(displ)
             strengths.append(strength)
 
-    return np.array(points), np.array(displs), np.array(strengths), np.dstack(refchips), np.dstack(searchchips)
+    return np.array(displs), np.array(strengths), np.dstack(refchips), np.dstack(searchchips)
