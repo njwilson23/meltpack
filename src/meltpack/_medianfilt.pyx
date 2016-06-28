@@ -13,7 +13,6 @@ def medianfilt(DTYPE_t[:,:] img):
 
     cdef int nx, ny
     cdef int i, j
-    cdef double runsum
     cdef int count
     cdef np.ndarray[DTYPE_t, ndim=2] out
 
@@ -28,7 +27,6 @@ def medianfilt(DTYPE_t[:,:] img):
     for i in range(1, ny-1):
         for j in range(1, nx-1):
             count = 0
-            runsum = 0.0
 
             if not isnan(img[i,j]):
                 count += 1
